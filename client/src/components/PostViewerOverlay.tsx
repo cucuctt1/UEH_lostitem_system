@@ -1,0 +1,173 @@
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { createPostCommentApi, listPostCommentsApi } from "../services/api/postApi";
+import { PostCommentItem, PostItem } from "../types";
+
+interface PostViewerOverlayProps {
+  post: PostItem;
+  images: string[];
+  initialIndex: number;
+  open: boolean;
+  onClose: () => void;
+}
+
+export function PostViewerOverlay({
+  post,
+  images,
+  initialIndex,
+  open,
+  onClose
+}: PostViewerOverlayProps) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [comments, setComments] = useState<PostCommentItem[]>([]);
+  const [commentText, setCommentText] = useState("");
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [sendingComment, setSendingComment] = useState(false);
+
+  const totalImages = images.length;
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    setActiveIndex(Math.min(Math.max(0, initialIndex), Math.max(0, totalImages - 1)));
+    setLoadingComments(true);
+
+    void listPostCommentsApi(post.id)
+      .then(setComments)
+      .finally(() => setLoadingComments(false));
+  }, [open, initialIndex, totalImages, post.id]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function onKeyDown(event: KeyboardEvent): void {
+      if (event.key === "Escape") {
+        onClose();
+      }
+      if (event.key === "ArrowLeft") {
+        setActiveIndex((prev) => (prev - 1 + totalImages) % totalImages);
+      }
+      if (event.key === "ArrowRight") {
+        setActiveIndex((prev) => (prev + 1) % totalImages);
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, onClose, totalImages]);
+
+  const activeImage = useMemo(() => images[activeIndex], [images, activeIndex]);
+
+  async function handleSubmitComment(event: FormEvent) {
+    event.preventDefault();
+    const trimmed = commentText.trim();
+    if (!trimmed || sendingComment) {
+      return;
+    }
+
+    setSendingComment(true);
+    try {
+      await createPostCommentApi(post.id, trimmed);
+      setCommentText("");
+      const latest = await listPostCommentsApi(post.id);
+      setComments(latest);
+    } finally {
+      setSendingComment(false);
+    }
+  }
+
+  if (!open || totalImages === 0) {
+    return null;
+  }
+
+  return (
+    <div className="post-viewer-backdrop" onClick={onClose}>
+      <div className="post-viewer-shell" onClick={(event) => event.stopPropagation()}>
+        <div className="post-viewer-media">
+          <button
+            type="button"
+            className="post-viewer-arrow left"
+            onClick={() => setActiveIndex((prev) => (prev - 1 + totalImages) % totalImages)}
+            aria-label="Previous image"
+          >
+            ‹
+          </button>
+
+          <img
+            src={activeImage}
+            alt={`${post.title} image ${activeIndex + 1}`}
+            className="post-viewer-image"
+            loading="eager"
+            decoding="async"
+          />
+
+          <button
+            type="button"
+            className="post-viewer-arrow right"
+            onClick={() => setActiveIndex((prev) => (prev + 1) % totalImages)}
+            aria-label="Next image"
+          >
+            ›
+          </button>
+
+          <div className="post-viewer-index">
+            {activeIndex + 1}/{totalImages}
+          </div>
+        </div>
+
+        <aside className="post-viewer-side">
+          <header className="post-viewer-header">
+            <h3>{post.title}</h3>
+            <button type="button" className="ghost-btn" onClick={onClose}>
+              Close
+            </button>
+          </header>
+
+          <p className="post-viewer-desc">{post.description}</p>
+
+          <div className="post-viewer-tags">
+            {post.tags.map((tag) => (
+              <span key={tag} className="tag-pill">
+                #{tag}
+              </span>
+            ))}
+          </div>
+
+          <section className="post-viewer-comments">
+            <h4>Comments</h4>
+            {loadingComments && <p className="hint-text">Loading comments...</p>}
+            {!loadingComments && comments.length === 0 && (
+              <p className="hint-text">No comments yet. Be the first to comment.</p>
+            )}
+            {!loadingComments && comments.length > 0 && (
+              <div className="post-viewer-comment-list">
+                {comments.map((comment) => (
+                  <div key={comment.id} className="post-viewer-comment-item">
+                    <strong>{comment.author.fullName}</strong>
+                    <p>{comment.content}</p>
+                    <small>{new Date(comment.createdAt).toLocaleString()}</small>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <form className="stack-form" onSubmit={handleSubmitComment}>
+            <textarea
+              value={commentText}
+              onChange={(event) => setCommentText(event.target.value)}
+              placeholder="Write a comment"
+              maxLength={1000}
+            />
+            <button type="submit" className="primary-btn" disabled={sendingComment}>
+              {sendingComment ? "Posting..." : "Post Comment"}
+            </button>
+          </form>
+        </aside>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,22 @@
+export const PREBUILT_TAGS = [
+  "backpack",
+  "wallet",
+  "id-card",
+  "student-card",
+  "laptop",
+  "phone",
+  "charger",
+  "earbuds",
+  "watch",
+  "keys",
+  "helmet",
+  "glasses",
+  "textbook",
+  "notebook",
+  "usb",
+  "water-bottle",
+  "umbrella",
+  "jacket",
+  "bag",
+  "documents"
+];

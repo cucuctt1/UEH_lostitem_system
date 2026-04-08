@@ -1,0 +1,12 @@
+node_modules/
+.env
+.env.*
+!.env.example
+dist/
+coverage/
+.DS_Store
+Thumbs.db
+server/uploads/*
+!server/uploads/.gitkeep
+client/.vite/
+*.log

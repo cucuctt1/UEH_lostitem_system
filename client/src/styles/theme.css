@@ -1,0 +1,44 @@
+@import url('https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700&display=swap');
+
+:root {
+  --bg-1: #eff2f7;
+  --bg-2: #e8edf5;
+  --ink: #152236;
+  --card: #ffffff;
+  --line: #dbe2ee;
+  --primary: #1877f2;
+  --primary-dark: #0f5fcc;
+  --teal: #29a5a0;
+  --danger: #c43a3a;
+  --muted: #637188;
+  --shadow: 0 10px 32px rgba(18, 44, 86, 0.12);
+  --topbar-height: 68px;
+  --sidebar-width: 286px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Public Sans", sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 10% 12%, rgba(24, 119, 242, 0.09), transparent 30%),
+    radial-gradient(circle at 86% 8%, rgba(41, 165, 160, 0.12), transparent 28%),
+    linear-gradient(180deg, var(--bg-1), var(--bg-2));
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: "Sora", sans-serif;
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
