@@ -60,7 +60,7 @@ export function ChangePasswordPage() {
       <section className="auth-side panel" aria-label="Hướng dẫn bảo mật">
         <div className="auth-logo-group">
           <img src="/icon-dark-32x32.png" alt="UEH Lost and Found" className="auth-side-logo" />
-          <p className="auth-kicker">Security First</p>
+          <p className="auth-kicker">Bảo mật ưu tiên</p>
         </div>
         <h2>Cập nhật thông tin xác thực</h2>
         <p className="auth-hint">
@@ -76,7 +76,7 @@ export function ChangePasswordPage() {
       <form className="auth-card auth-main-card" onSubmit={handleSubmit}>
         <div className="auth-logo-group auth-logo-inline">
           <img src="/icon-dark-32x32.png" alt="UEH Lost and Found" className="auth-inline-logo" />
-          <span className="auth-kicker">UEH Account Security</span>
+          <span className="auth-kicker">Bảo mật tài khoản UEH</span>
         </div>
         <p className="auth-kicker">Bảo mật tài khoản</p>
         <h1>{isFirstLogin ? "Bắt buộc đổi mật khẩu" : "Đổi mật khẩu"}</h1>

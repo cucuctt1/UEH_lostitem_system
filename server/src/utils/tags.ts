@@ -1,4 +1,4 @@
-const TAG_BODY_PATTERN = /^[a-z0-9][a-z0-9-]{0,39}$/;
+const TAG_BODY_PATTERN = /^[\p{L}\p{N}][\p{L}\p{N}_-]{0,39}$/u;
 
 export function normalizeTagToken(raw: string): string | null {
   const trimmed = raw.trim().toLowerCase();

@@ -15,20 +15,20 @@ import { resolveMediaUrl } from "../utils/media";
 
 function formatRelativeChatTime(value?: string | null): string {
   if (!value) {
-    return "vua xong";
+    return "vừa xong";
   }
 
   const timestamp = new Date(value).getTime();
   if (!Number.isFinite(timestamp)) {
-    return "vua xong";
+    return "vừa xong";
   }
 
   const diffSeconds = Math.max(1, Math.floor((Date.now() - timestamp) / 1000));
   if (diffSeconds < 60) {
-    return `${diffSeconds} giay truoc`;
+    return `${diffSeconds} giây trước`;
   }
   if (diffSeconds < 3600) {
-    return `${Math.floor(diffSeconds / 60)} phut truoc`;
+    return `${Math.floor(diffSeconds / 60)} phút trước`;
   }
 
   const createdAt = new Date(timestamp);
@@ -67,16 +67,16 @@ export function ChatPage() {
 
   const activeConversationName = useMemo(() => {
     if (!selectedConversation) {
-      return "Cuoc tro chuyen moi";
+      return "Cuộc trò chuyện mới";
     }
 
     if (!currentUserId) {
-      return selectedConversation.user_one_name ?? selectedConversation.user_two_name ?? "Cuoc tro chuyen";
+      return selectedConversation.user_one_name ?? selectedConversation.user_two_name ?? "Cuộc trò chuyện";
     }
 
     return selectedConversation.user_one_id === currentUserId
-      ? selectedConversation.user_two_name ?? "Cuoc tro chuyen"
-      : selectedConversation.user_one_name ?? "Cuoc tro chuyen";
+      ? selectedConversation.user_two_name ?? "Cuộc trò chuyện"
+      : selectedConversation.user_one_name ?? "Cuộc trò chuyện";
   }, [selectedConversation, currentUserId]);
 
   const conversationMatches = useMemo(() => {
@@ -107,18 +107,18 @@ export function ChatPage() {
 
   const returnStatusText = useMemo(() => {
     if (!selectedConversationId) {
-      return "Hay chon cuoc tro chuyen truoc.";
+      return "Hãy chọn cuộc trò chuyện trước.";
     }
 
     if (returnedMatch) {
-      return `Da xac nhan tra lai voi Match #${returnedMatch.id}.`;
+      return `Đã xác nhận trả lại với Match #${returnedMatch.id}.`;
     }
 
     if (confirmableMatch) {
-      return `San sang xac nhan bang Match #${confirmableMatch.id}.`;
+      return `Sẵn sàng xác nhận bằng Match #${confirmableMatch.id}.`;
     }
 
-    return "Khong tim thay match dang hoat dong cho cuoc tro chuyen nay.";
+    return "Không tìm thấy match đang hoạt động cho cuộc trò chuyện này.";
   }, [selectedConversationId, returnedMatch, confirmableMatch]);
 
   async function loadConversations() {
@@ -191,7 +191,7 @@ export function ChatPage() {
     }
 
     if (!file.type.startsWith("image/")) {
-      alert("Vui long chon tep hinh anh.");
+      alert("Vui lòng chọn tệp hình ảnh.");
       return;
     }
 
@@ -229,7 +229,7 @@ export function ChatPage() {
     }
 
     if (!canSendInCurrentContext) {
-      alert("Hay chon cuoc tro chuyen hoac mo chat tu trang chi tiet bai dang.");
+      alert("Hãy chọn cuộc trò chuyện hoặc mở chat từ trang chi tiết bài đăng.");
       return;
     }
 
@@ -267,23 +267,23 @@ export function ChatPage() {
     try {
       await confirmReturnApi(selectedConversationId, confirmableMatch.id);
       await loadMatches();
-      alert("Da xac nhan tra lai va cap nhat trang thai.");
+      alert("Đã xác nhận trả lại và cập nhật trạng thái.");
     } finally {
       setConfirmingReturn(false);
     }
   }
 
   return (
-    <AppShell title="Tin nhan">
+    <AppShell title="Tin nhắn">
       <section className="chat-layout messenger-layout">
         <aside className="panel chat-list messenger-list">
           <div className="chat-list-head">
-            <h3>Tin nhan</h3>
-            <p className="hint-text">Cap nhat tu dong theo chu ky de khong bo lo hoi thoai moi.</p>
+            <h3>Tin nhắn</h3>
+            <p className="hint-text">Cập nhật tự động theo chu kỳ để không bỏ lỡ hội thoại mới.</p>
           </div>
 
           <div className="chat-list-scroll">
-            {conversations.length === 0 && <p>Chua co cuoc tro chuyen nao. Hay bat dau tu trang chi tiet bai dang.</p>}
+            {conversations.length === 0 && <p>Chưa có cuộc trò chuyện nào. Hãy bắt đầu từ trang chi tiết bài đăng.</p>}
             {conversations.map((conversation) => {
               const conversationName =
                 currentUserId && conversation.user_one_id === currentUserId
@@ -296,7 +296,7 @@ export function ChatPage() {
                   className={`chat-list-item ${selectedConversationId === conversation.id ? "active" : ""}`}
                   onClick={() => setSelectedConversationId(conversation.id)}
                 >
-                  <strong>{conversationName ?? "Cuoc tro chuyen"}</strong>
+                  <strong>{conversationName ?? "Cuộc trò chuyện"}</strong>
                   <small>{conversation.post_title}</small>
                   <small>{formatRelativeChatTime(conversation.last_message_at ?? conversation.created_at)}</small>
                 </button>
@@ -309,14 +309,14 @@ export function ChatPage() {
           <header className="chat-main-header">
             <div>
               <h3 className="chat-partner-name">{activeConversationName}</h3>
-              <p className="hint-text">{selectedConversation?.post_title ?? "Chon cuoc tro chuyen de bat dau nhan tin."}</p>
+              <p className="hint-text">{selectedConversation?.post_title ?? "Chọn cuộc trò chuyện để bắt đầu nhắn tin."}</p>
             </div>
 
             <div className="chat-header-actions">
-              <p className="hint-text">So dien thoai chi hien thi trong ngu canh chat hop le theo chinh sach.</p>
+              <p className="hint-text">Số điện thoại chỉ hiển thị trong ngữ cảnh chat hợp lệ theo chính sách.</p>
 
               <div className="chat-return-box">
-                <small>Quy trinh xac nhan tra lai</small>
+                <small>Quy trình xác nhận trả lại</small>
                 <button
                   className="secondary-btn chat-return-btn"
                   type="button"
@@ -329,12 +329,12 @@ export function ChatPage() {
                   }
                 >
                   {confirmingReturn
-                    ? "Dang xac nhan..."
+                    ? "Đang xác nhận..."
                     : returnedMatch
-                      ? "Da tra lai"
+                      ? "Đã trả lại"
                       : confirmableMatch
-                        ? "Xac nhan da tra lai"
-                        : "Khong co match de xac nhan"}
+                        ? "Xác nhận đã trả lại"
+                        : "Không có match để xác nhận"}
                 </button>
                 <p className="hint-text">{returnStatusText}</p>
               </div>
@@ -343,7 +343,7 @@ export function ChatPage() {
 
           <div className="message-thread messenger-thread" ref={threadRef}>
             {messages.length === 0 && (
-              <p className="chat-thread-empty">Chua co tin nhan. Hay gui tin dau tien.</p>
+              <p className="chat-thread-empty">Chưa có tin nhắn. Hãy gửi tin đầu tiên.</p>
             )}
 
             {messages.map((message) => {
@@ -361,7 +361,7 @@ export function ChatPage() {
                       <a href={mediaUrl} target="_blank" rel="noreferrer" className="message-image-link">
                         <img
                           src={mediaUrl}
-                          alt="Tep dinh kem"
+                          alt="Tệp đính kèm"
                           className="message-image"
                           loading="lazy"
                           decoding="async"
@@ -378,22 +378,22 @@ export function ChatPage() {
 
           <form className="chat-composer" onSubmit={handleSend}>
             <textarea
-              placeholder="Nhap noi dung tin nhan..."
+              placeholder="Nhập nội dung tin nhắn..."
               value={text}
               onChange={(event) => setText(event.target.value)}
             />
 
             {selectedImagePreviewUrl && (
               <div className="chat-composer-attachment">
-                <img src={selectedImagePreviewUrl} alt="Xem truoc tep dinh kem" className="chat-attachment-preview" />
+                <img src={selectedImagePreviewUrl} alt="Xem trước tệp đính kèm" className="chat-attachment-preview" />
                 <div className="chat-attachment-meta">
-                  <span>{selectedImageFile?.name ?? "Anh dinh kem"}</span>
+                  <span>{selectedImageFile?.name ?? "Ảnh đính kèm"}</span>
                   <button
                     className="ghost-btn"
                     type="button"
                     onClick={clearSelectedAttachment}
                   >
-                    Xoa
+                    Xóa
                   </button>
                 </div>
               </div>
@@ -401,7 +401,7 @@ export function ChatPage() {
 
             <div className="chat-composer-row">
               <label className="secondary-btn chat-attach-btn">
-                Dinh kem anh
+                Đính kèm ảnh
                 <input type="file" accept="image/*" onChange={handleAttachmentChange} />
               </label>
 
@@ -410,12 +410,12 @@ export function ChatPage() {
                 type="submit"
                 disabled={sendingMessage || !canSendInCurrentContext}
               >
-                {sendingMessage ? "Dang gui..." : "Gui"}
+                {sendingMessage ? "Đang gửi..." : "Gửi"}
               </button>
             </div>
 
             {!canSendInCurrentContext && (
-              <p className="hint-text">Hay chon cuoc tro chuyen hien co de gui tin nhan.</p>
+              <p className="hint-text">Hãy chọn cuộc trò chuyện hiện có để gửi tin nhắn.</p>
             )}
           </form>
         </div>

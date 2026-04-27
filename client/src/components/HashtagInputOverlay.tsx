@@ -36,7 +36,7 @@ function getActiveToken(text: string, cursor: number | null): ActiveToken | null
   }
 
   const keyword = token.slice(1).toLowerCase();
-  if (!/^[a-z0-9-]*$/.test(keyword)) {
+  if (!/^[\p{L}\p{N}_-]*$/u.test(keyword)) {
     return null;
   }
 

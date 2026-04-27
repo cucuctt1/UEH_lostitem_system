@@ -18,9 +18,10 @@ function parseHybridSearchQuery(query: string): { keyword?: string; tag?: string
     return {};
   }
 
-  const tagMatches = normalized.match(/#[a-z0-9][a-z0-9-_]*/gi) ?? [];
+  const hashtagPattern = /#[\p{L}\p{N}][\p{L}\p{N}_-]*/gu;
+  const tagMatches = normalized.match(hashtagPattern) ?? [];
   const keyword = normalized
-    .replace(/#[a-z0-9][a-z0-9-_]*/gi, " ")
+    .replace(hashtagPattern, " ")
     .replace(/\s+/g, " ")
     .trim();
 

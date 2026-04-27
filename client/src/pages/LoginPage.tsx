@@ -26,9 +26,9 @@ export function LoginPage() {
       <section className="auth-side panel" aria-label="Thông tin hệ thống">
         <div className="auth-logo-group">
           <img src="/icon-dark-32x32.png" alt="UEH Lost and Found" className="auth-side-logo" />
-          <p className="auth-kicker">Campus Community</p>
+          <p className="auth-kicker">Cộng đồng UEH</p>
         </div>
-        <h2>Lost & Found cho sinh viên UEH</h2>
+        <h2>Hệ thống Thất lạc & Nhặt được UEH</h2>
         <p className="auth-hint">
           Giao diện mới tối ưu cho tìm kiếm theo #thẻ, vị trí và ngữ cảnh trả lại.
         </p>
@@ -42,7 +42,7 @@ export function LoginPage() {
       <form className="auth-card auth-main-card" onSubmit={handleSubmit}>
         <div className="auth-logo-group auth-logo-inline">
           <img src="/icon-dark-32x32.png" alt="UEH Lost and Found" className="auth-inline-logo" />
-          <span className="auth-kicker">UEH Secure Login</span>
+          <span className="auth-kicker">Đăng nhập bảo mật UEH</span>
         </div>
         <p className="auth-kicker">Cộng đồng UEH</p>
         <h1>Đăng nhập hệ thống</h1>

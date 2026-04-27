@@ -129,7 +129,11 @@ export function PostCard({ post, showSocialActions = true }: PostCardProps) {
       }
       setShareNotice("done");
       window.setTimeout(() => setShareNotice("idle"), 1800);
-    } catch {
+    } catch (error: any) {
+      if (error?.name === "AbortError") {
+        return;
+      }
+
       try {
         if (navigator.clipboard?.writeText) {
           await navigator.clipboard.writeText(postUrl);

@@ -54,7 +54,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       setStoredUser(data.user);
       set({ token: data.token, user: data.user, loading: false });
     } catch (error: any) {
-      set({ loading: false, error: error?.response?.data?.message ?? "Dang nhap that bai" });
+      set({ loading: false, error: error?.response?.data?.message ?? "Đăng nhập thất bại" });
       throw error;
     }
   },

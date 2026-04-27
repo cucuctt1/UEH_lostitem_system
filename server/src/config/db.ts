@@ -9,6 +9,7 @@ export const dbPool = mysql.createPool({
   user: env.mysql.user,
   password: env.mysql.password,
   database: env.mysql.database,
+  charset: "utf8mb4",
   waitForConnections: true,
   connectionLimit: 10,
   namedPlaceholders: false
@@ -39,6 +40,7 @@ export async function setupDatabaseIfEnabled(): Promise<void> {
     port: env.mysql.port,
     user: env.mysql.user,
     password: env.mysql.password,
+    charset: "utf8mb4",
     waitForConnections: true,
     connectionLimit: 2,
     multipleStatements: true
