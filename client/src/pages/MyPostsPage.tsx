@@ -66,7 +66,7 @@ export function MyPostsPage() {
   }, [posts]);
 
   async function handleDelete(post: UserPostHistoryItem): Promise<void> {
-    const confirmed = window.confirm(`Delete post \"${post.title}\"?`);
+    const confirmed = window.confirm(`Bạn có chắc chắn muốn xóa bài đăng \"${post.title}\"?`);
     if (!confirmed) {
       return;
     }
@@ -81,12 +81,36 @@ export function MyPostsPage() {
     }
   }
 
+  function toTypeLabel(type: UserPostHistoryItem["type"]): string {
+    return type === "lost" ? "THẤT LẠC" : "NHẶT ĐƯỢC";
+  }
+
+  function toStatusLabel(status: UserPostHistoryItem["status"]): string {
+    if (status === "searching") {
+      return "Đang tìm";
+    }
+    if (status === "found") {
+      return "Đã tìm thấy";
+    }
+    return "Đã trả lại";
+  }
+
+  function toModerationLabel(status: UserPostHistoryItem["moderation_status"]): string {
+    if (status === "pending") {
+      return "Chờ duyệt";
+    }
+    if (status === "approved") {
+      return "Đã duyệt";
+    }
+    return "Từ chối";
+  }
+
   return (
-    <AppShell title="Manage My Posts">
+    <AppShell title="Quản lý bài đăng của tôi">
       <section className="panel manage-posts-toolbar">
         <div className="manage-posts-filters">
           <input
-            placeholder="Search my posts"
+            placeholder="Tìm bài đăng của tôi"
             value={keyword}
             onChange={(event) => setKeyword(event.target.value)}
           />
@@ -95,37 +119,37 @@ export function MyPostsPage() {
             value={moderationFilter}
             onChange={(event) => setModerationFilter(event.target.value as ModerationFilter)}
           >
-            <option value="all">All Moderation</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
+            <option value="all">Tất cả trạng thái duyệt</option>
+            <option value="pending">Chờ duyệt</option>
+            <option value="approved">Đã duyệt</option>
+            <option value="rejected">Từ chối</option>
           </select>
 
           <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as TypeFilter)}>
-            <option value="all">All Types</option>
-            <option value="lost">Lost</option>
-            <option value="found">Found</option>
+            <option value="all">Tất cả loại</option>
+            <option value="lost">Thất lạc</option>
+            <option value="found">Nhặt được</option>
           </select>
 
           <button className="ghost-btn" type="button" onClick={() => void loadMyPosts()}>
-            Refresh
+            Làm mới
           </button>
         </div>
 
         <div className="manage-posts-summary">
-          <span className="badge">Total {counts.total}</span>
-          <span className="badge">Pending {counts.pending}</span>
-          <span className="badge">Approved {counts.approved}</span>
-          <span className="badge">Rejected {counts.rejected}</span>
+          <span className="badge">Tổng: {counts.total}</span>
+          <span className="badge">Chờ duyệt: {counts.pending}</span>
+          <span className="badge">Đã duyệt: {counts.approved}</span>
+          <span className="badge">Từ chối: {counts.rejected}</span>
         </div>
       </section>
 
       <section className="manage-posts-grid">
-        {loading && <p>Loading your posts...</p>}
+        {loading && <p>Đang tải danh sách bài đăng...</p>}
 
         {!loading && filteredPosts.length === 0 && (
           <div className="panel">
-            <p>No posts match the current filters.</p>
+            <p>Không có bài đăng nào phù hợp với bộ lọc hiện tại.</p>
           </div>
         )}
 
@@ -143,17 +167,19 @@ export function MyPostsPage() {
                   </button>
                 </h3>
                 <div className="post-top">
-                  <span className={`chip chip-${post.type}`}>{post.type.toUpperCase()}</span>
-                  <span className="chip">{post.status}</span>
-                  <span className={`chip moderation-${post.moderation_status}`}>{post.moderation_status}</span>
+                  <span className={`chip chip-${post.type}`}>{toTypeLabel(post.type)}</span>
+                  <span className="chip">{toStatusLabel(post.status)}</span>
+                  <span className={`chip moderation-${post.moderation_status}`}>
+                    {toModerationLabel(post.moderation_status)}
+                  </span>
                 </div>
               </div>
 
-              <p className="hint-text">Created {formatDateTime(post.created_at)}</p>
+              <p className="hint-text">Tạo lúc {formatDateTime(post.created_at)}</p>
 
               <div className="manage-post-actions">
                 <button className="secondary-btn" type="button" onClick={() => navigate(`/posts/${post.id}`)}>
-                  Open/Edit
+                  Mở/Sửa
                 </button>
                 <button
                   className="danger-btn"
@@ -161,7 +187,7 @@ export function MyPostsPage() {
                   onClick={() => void handleDelete(post)}
                   disabled={deletingPostId === post.id}
                 >
-                  {deletingPostId === post.id ? "Deleting..." : "Delete"}
+                  {deletingPostId === post.id ? "Đang xóa..." : "Xóa"}
                 </button>
               </div>
             </article>

@@ -39,7 +39,7 @@ export function CreatePostPage() {
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (!categoryId || !locationId) {
-      alert("Please choose category and location");
+      alert("Vui lòng chọn danh mục và vị trí.");
       return;
     }
 
@@ -63,24 +63,24 @@ export function CreatePostPage() {
   }
 
   return (
-    <AppShell title="Create Lost/Found Post">
+    <AppShell title="Tạo bài đăng thất lạc/nhặt được">
       <section className="panel">
         <form className="stack-form" onSubmit={handleSubmit}>
           <label>
-            Type
+            Loại bài đăng
             <select value={type} onChange={(event) => setType(event.target.value as any)}>
-              <option value="lost">Lost</option>
-              <option value="found">Found</option>
+              <option value="lost">Thất lạc</option>
+              <option value="found">Nhặt được</option>
             </select>
           </label>
 
           <label>
-            Title
+            Tiêu đề
             <input value={title} onChange={(event) => setTitle(event.target.value)} required minLength={5} />
           </label>
 
           <label>
-            Description
+            Mô tả
             <textarea
               value={description}
               onChange={(event) => setDescription(event.target.value)}
@@ -90,7 +90,7 @@ export function CreatePostPage() {
           </label>
 
           <label>
-            Category
+            Danh mục
             <select value={categoryId} onChange={(event) => setCategoryId(Number(event.target.value))}>
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
@@ -101,7 +101,7 @@ export function CreatePostPage() {
           </label>
 
           <label>
-            Location
+            Vị trí
             <select value={locationId} onChange={(event) => setLocationId(Number(event.target.value))}>
               {locations.map((location) => (
                 <option key={location.id} value={location.id}>
@@ -112,7 +112,7 @@ export function CreatePostPage() {
           </label>
 
           <label>
-            Time
+            Thời điểm xảy ra
             <input
               type="datetime-local"
               value={eventTime}
@@ -122,31 +122,31 @@ export function CreatePostPage() {
           </label>
 
           <label>
-            Tags (space separated, each starts with #)
+            Thẻ (cách nhau bởi khoảng trắng, mỗi thẻ bắt đầu bằng #)
             <HashtagInputOverlay
               value={tagsText}
               onChange={setTagsText}
-              placeholder="#backpack #charger #id-card"
+              placeholder="#ba-lo #sac-dien-thoai #the-sv"
             />
           </label>
-          <p className="hint-text">Type # then letters (e.g. #ba) to see overlay tag suggestions.</p>
+          <p className="hint-text">Gõ # và một vài ký tự (vd: #ba) để gợi ý thẻ tự động.</p>
 
           <label>
-            Contact Note
+            Ghi chú liên hệ
             <input value={contactNote} onChange={(event) => setContactNote(event.target.value)} />
           </label>
 
           <label>
-            Item Status
+            Trạng thái vật phẩm
             <select value={status} onChange={(event) => setStatus(event.target.value as any)}>
-              <option value="searching">Searching</option>
-              <option value="found">Found</option>
-              <option value="returned">Returned</option>
+              <option value="searching">Đang tìm</option>
+              <option value="found">Đã tìm thấy</option>
+              <option value="returned">Đã trả lại</option>
             </select>
           </label>
 
           <label>
-            Images (multiple)
+            Hình ảnh (nhiều ảnh)
             <input
               type="file"
               accept="image/*"
@@ -155,11 +155,11 @@ export function CreatePostPage() {
             />
           </label>
           {imageFiles.length > 0 && (
-            <p className="hint-text">Selected {imageFiles.length} image(s) for this post.</p>
+            <p className="hint-text">Đã chọn {imageFiles.length} ảnh cho bài đăng này.</p>
           )}
 
           <button className="primary-btn" type="submit">
-            Create Post
+            Tạo bài đăng
           </button>
         </form>
       </section>

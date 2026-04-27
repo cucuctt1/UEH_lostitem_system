@@ -15,20 +15,20 @@ import { resolveMediaUrl } from "../utils/media";
 
 function formatRelativeChatTime(value?: string | null): string {
   if (!value) {
-    return "just now";
+    return "vua xong";
   }
 
   const timestamp = new Date(value).getTime();
   if (!Number.isFinite(timestamp)) {
-    return "just now";
+    return "vua xong";
   }
 
   const diffSeconds = Math.max(1, Math.floor((Date.now() - timestamp) / 1000));
   if (diffSeconds < 60) {
-    return `${diffSeconds}s ago`;
+    return `${diffSeconds} giay truoc`;
   }
   if (diffSeconds < 3600) {
-    return `${Math.floor(diffSeconds / 60)}m ago`;
+    return `${Math.floor(diffSeconds / 60)} phut truoc`;
   }
 
   const createdAt = new Date(timestamp);
@@ -67,16 +67,16 @@ export function ChatPage() {
 
   const activeConversationName = useMemo(() => {
     if (!selectedConversation) {
-      return "New conversation";
+      return "Cuoc tro chuyen moi";
     }
 
     if (!currentUserId) {
-      return selectedConversation.user_one_name ?? selectedConversation.user_two_name ?? "Conversation";
+      return selectedConversation.user_one_name ?? selectedConversation.user_two_name ?? "Cuoc tro chuyen";
     }
 
     return selectedConversation.user_one_id === currentUserId
-      ? selectedConversation.user_two_name ?? "Conversation"
-      : selectedConversation.user_one_name ?? "Conversation";
+      ? selectedConversation.user_two_name ?? "Cuoc tro chuyen"
+      : selectedConversation.user_one_name ?? "Cuoc tro chuyen";
   }, [selectedConversation, currentUserId]);
 
   const conversationMatches = useMemo(() => {
@@ -107,18 +107,18 @@ export function ChatPage() {
 
   const returnStatusText = useMemo(() => {
     if (!selectedConversationId) {
-      return "Select a conversation first.";
+      return "Hay chon cuoc tro chuyen truoc.";
     }
 
     if (returnedMatch) {
-      return `Already returned with Match #${returnedMatch.id}.`;
+      return `Da xac nhan tra lai voi Match #${returnedMatch.id}.`;
     }
 
     if (confirmableMatch) {
-      return `Ready to confirm using Match #${confirmableMatch.id}.`;
+      return `San sang xac nhan bang Match #${confirmableMatch.id}.`;
     }
 
-    return "No active match found for this conversation.";
+    return "Khong tim thay match dang hoat dong cho cuoc tro chuyen nay.";
   }, [selectedConversationId, returnedMatch, confirmableMatch]);
 
   async function loadConversations() {
@@ -191,7 +191,7 @@ export function ChatPage() {
     }
 
     if (!file.type.startsWith("image/")) {
-      alert("Please choose an image file.");
+      alert("Vui long chon tep hinh anh.");
       return;
     }
 
@@ -229,7 +229,7 @@ export function ChatPage() {
     }
 
     if (!canSendInCurrentContext) {
-      alert("Select a conversation first, or open chat from a post detail page.");
+      alert("Hay chon cuoc tro chuyen hoac mo chat tu trang chi tiet bai dang.");
       return;
     }
 
@@ -267,23 +267,23 @@ export function ChatPage() {
     try {
       await confirmReturnApi(selectedConversationId, confirmableMatch.id);
       await loadMatches();
-      alert("Return confirmed and statuses updated.");
+      alert("Da xac nhan tra lai va cap nhat trang thai.");
     } finally {
       setConfirmingReturn(false);
     }
   }
 
   return (
-    <AppShell title="Chat">
+    <AppShell title="Tin nhan">
       <section className="chat-layout messenger-layout">
         <aside className="panel chat-list messenger-list">
           <div className="chat-list-head">
-            <h3>Messages</h3>
-            <p className="hint-text">Chat like a texting app with real-time polling refresh.</p>
+            <h3>Tin nhan</h3>
+            <p className="hint-text">Cap nhat tu dong theo chu ky de khong bo lo hoi thoai moi.</p>
           </div>
 
           <div className="chat-list-scroll">
-            {conversations.length === 0 && <p>No conversations yet. Start from a post detail page.</p>}
+            {conversations.length === 0 && <p>Chua co cuoc tro chuyen nao. Hay bat dau tu trang chi tiet bai dang.</p>}
             {conversations.map((conversation) => {
               const conversationName =
                 currentUserId && conversation.user_one_id === currentUserId
@@ -296,7 +296,7 @@ export function ChatPage() {
                   className={`chat-list-item ${selectedConversationId === conversation.id ? "active" : ""}`}
                   onClick={() => setSelectedConversationId(conversation.id)}
                 >
-                  <strong>{conversationName ?? "Conversation"}</strong>
+                  <strong>{conversationName ?? "Cuoc tro chuyen"}</strong>
                   <small>{conversation.post_title}</small>
                   <small>{formatRelativeChatTime(conversation.last_message_at ?? conversation.created_at)}</small>
                 </button>
@@ -309,14 +309,14 @@ export function ChatPage() {
           <header className="chat-main-header">
             <div>
               <h3 className="chat-partner-name">{activeConversationName}</h3>
-              <p className="hint-text">{selectedConversation?.post_title ?? "Pick a conversation to start chatting."}</p>
+              <p className="hint-text">{selectedConversation?.post_title ?? "Chon cuoc tro chuyen de bat dau nhan tin."}</p>
             </div>
 
             <div className="chat-header-actions">
-              <p className="hint-text">Phone numbers are disclosed only in authorized chat context by policy.</p>
+              <p className="hint-text">So dien thoai chi hien thi trong ngu canh chat hop le theo chinh sach.</p>
 
               <div className="chat-return-box">
-                <small>Return Workflow</small>
+                <small>Quy trinh xac nhan tra lai</small>
                 <button
                   className="secondary-btn chat-return-btn"
                   type="button"
@@ -329,12 +329,12 @@ export function ChatPage() {
                   }
                 >
                   {confirmingReturn
-                    ? "Confirming..."
+                    ? "Dang xac nhan..."
                     : returnedMatch
-                      ? "Already Returned"
+                      ? "Da tra lai"
                       : confirmableMatch
-                        ? "Confirm Item Returned"
-                        : "No Match To Confirm"}
+                        ? "Xac nhan da tra lai"
+                        : "Khong co match de xac nhan"}
                 </button>
                 <p className="hint-text">{returnStatusText}</p>
               </div>
@@ -343,7 +343,7 @@ export function ChatPage() {
 
           <div className="message-thread messenger-thread" ref={threadRef}>
             {messages.length === 0 && (
-              <p className="chat-thread-empty">No messages yet. Send the first one.</p>
+              <p className="chat-thread-empty">Chua co tin nhan. Hay gui tin dau tien.</p>
             )}
 
             {messages.map((message) => {
@@ -361,7 +361,7 @@ export function ChatPage() {
                       <a href={mediaUrl} target="_blank" rel="noreferrer" className="message-image-link">
                         <img
                           src={mediaUrl}
-                          alt="Message attachment"
+                          alt="Tep dinh kem"
                           className="message-image"
                           loading="lazy"
                           decoding="async"
@@ -378,22 +378,22 @@ export function ChatPage() {
 
           <form className="chat-composer" onSubmit={handleSend}>
             <textarea
-              placeholder="Write a message..."
+              placeholder="Nhap noi dung tin nhan..."
               value={text}
               onChange={(event) => setText(event.target.value)}
             />
 
             {selectedImagePreviewUrl && (
               <div className="chat-composer-attachment">
-                <img src={selectedImagePreviewUrl} alt="Attachment preview" className="chat-attachment-preview" />
+                <img src={selectedImagePreviewUrl} alt="Xem truoc tep dinh kem" className="chat-attachment-preview" />
                 <div className="chat-attachment-meta">
-                  <span>{selectedImageFile?.name ?? "Attached image"}</span>
+                  <span>{selectedImageFile?.name ?? "Anh dinh kem"}</span>
                   <button
                     className="ghost-btn"
                     type="button"
                     onClick={clearSelectedAttachment}
                   >
-                    Remove
+                    Xoa
                   </button>
                 </div>
               </div>
@@ -401,7 +401,7 @@ export function ChatPage() {
 
             <div className="chat-composer-row">
               <label className="secondary-btn chat-attach-btn">
-                Attach Image
+                Dinh kem anh
                 <input type="file" accept="image/*" onChange={handleAttachmentChange} />
               </label>
 
@@ -410,12 +410,12 @@ export function ChatPage() {
                 type="submit"
                 disabled={sendingMessage || !canSendInCurrentContext}
               >
-                {sendingMessage ? "Sending..." : "Send"}
+                {sendingMessage ? "Dang gui..." : "Gui"}
               </button>
             </div>
 
             {!canSendInCurrentContext && (
-              <p className="hint-text">Select an existing conversation to send messages.</p>
+              <p className="hint-text">Hay chon cuoc tro chuyen hien co de gui tin nhan.</p>
             )}
           </form>
         </div>

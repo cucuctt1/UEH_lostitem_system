@@ -5,6 +5,7 @@ export interface AuthUser {
   email: string;
   role: Role;
   fullName: string;
+  mustChangePassword?: boolean;
 }
 
 export interface ApiResponse<T> {

@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { asyncHandler, sendSuccess } from "../utils/http";
 import {
   approvePost,
+  createUserAsAdmin,
   createStoredItemAsAdmin,
   deletePostAsAdmin,
   getReports,
@@ -45,6 +46,16 @@ export const adminResolveReportController = asyncHandler(async (request: Request
 export const adminListItemsController = asyncHandler(async (_request: Request, response: Response) => {
   const items = await getStoredItems();
   sendSuccess(response, "Fetched stored items", items);
+});
+
+export const adminCreateUserController = asyncHandler(async (request: Request, response: Response) => {
+  const result = await createUserAsAdmin({
+    fullName: request.body.fullName,
+    email: request.body.email,
+    temporaryPassword: request.body.temporaryPassword
+  });
+
+  sendSuccess(response, "User account created", result, 201);
 });
 
 export const adminCreateItemController = asyncHandler(async (request: Request, response: Response) => {

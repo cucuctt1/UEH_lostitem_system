@@ -102,12 +102,16 @@ Design highlights:
 
 Seed data in database/seed.sql:
 - Categories, locations
-- Demo user + admin
-- Sample lost/found posts
+- One default admin account
 
 Demo credentials:
-- student@univ.edu / bacon123
-- admin@univ.edu / bacon123
+- admin@st.ueh.edu.vn / bacon123
+
+Auth policy:
+- Email must end with @st.ueh.edu.vn.
+- Public self-registration is disabled.
+- User accounts are created by admin only.
+- New accounts must change password on first login.
 
 ## 4) Backend (Express) Overview
 
@@ -140,13 +144,13 @@ Required endpoints implemented:
 - GET /matches
 
 Additional endpoints:
-- POST /auth/register
 - GET /users/me/history
+- PATCH /users/me/password
 - GET /messages/conversations
 - POST /messages/:conversationId/confirm-return
 - GET/PATCH /notifications
 - POST/GET /reports
-- Admin reports/users/items management
+- Admin reports/users/items management (including POST /admin/users)
 - GET /analytics
 - GET /lookup/categories and /lookup/locations
 
@@ -198,6 +202,27 @@ Notes:
 ### Build for production
 - npm run build
 - npm run start
+
+### Run behind Nginx (production)
+1. Copy `server/nginx/lost-found-api.conf` to your server, for example:
+  - `/etc/nginx/sites-available/lost-found-api.conf`
+
+2. Edit the Nginx config:
+  - Replace `server_name api.example.com` with your real API domain.
+  - If your Node API runs on a different port, update `127.0.0.1:4000` in `upstream`.
+  - Keep `client_max_body_size` aligned with `MAX_UPLOAD_MB` from `server/.env`.
+
+3. Enable the site and reload Nginx:
+  - `sudo ln -s /etc/nginx/sites-available/lost-found-api.conf /etc/nginx/sites-enabled/lost-found-api.conf`
+  - `sudo nginx -t`
+  - `sudo systemctl reload nginx`
+
+4. Update server environment for proxy mode:
+  - Set `TRUST_PROXY=true` in `server/.env`.
+  - Set `UPLOAD_BASE_URL` to your public API URL (example: `https://api.example.com/uploads`).
+
+5. Update client API base URL for production:
+  - Set `VITE_API_BASE_URL` to your API domain (example: `https://api.example.com`).
 
 ## 7) Test Scenarios
 
@@ -423,10 +448,13 @@ This section documents connection type, authentication, payload, and response sh
 
 ```json
 {
-  "email": "student@univ.edu",
+  "email": "admin@st.ueh.edu.vn",
   "password": "bacon123"
 }
 ```
+
+- Notes:
+  - Email must end with `@st.ueh.edu.vn`.
 
 - Success `data`:
 
@@ -435,29 +463,31 @@ This section documents connection type, authentication, payload, and response sh
   "token": "<jwt>",
   "user": {
     "id": 1,
-    "email": "student@univ.edu",
-    "fullName": "Student",
-    "role": "user",
+    "email": "admin@st.ueh.edu.vn",
+    "fullName": "UEH System Admin",
+    "role": "admin",
+    "mustChangePassword": false,
     "avatarUrl": null,
     "bio": null
   }
 }
 ```
 
-#### POST /auth/register
-- Auth: none
+#### POST /admin/users
+- Auth: Bearer JWT (`admin` only)
 - Content-Type: `application/json`
+- Purpose: create user account (public registration is disabled)
 - Payload:
 
 ```json
 {
-  "email": "new-user@univ.edu",
-  "password": "bacon123",
-  "fullName": "New User"
+  "fullName": "Nguyen Van A",
+  "email": "nguyenvana@st.ueh.edu.vn",
+  "temporaryPassword": "TempPass123"
 }
 ```
 
-- Success `data`: same shape as `/auth/login`.
+- Behavior: newly created user is required to change password on first login.
 
 ### User APIs
 
@@ -469,13 +499,26 @@ This section documents connection type, authentication, payload, and response sh
 ```json
 {
   "id": 1,
-  "email": "student@univ.edu",
-  "fullName": "Student",
+  "email": "admin@st.ueh.edu.vn",
+  "fullName": "UEH System Admin",
   "phone": null,
-  "role": "user",
+  "role": "admin",
+  "mustChangePassword": false,
   "avatarUrl": null,
   "bio": null,
   "createdAt": "2026-01-01T10:00:00.000Z"
+}
+```
+
+#### PATCH /users/me/password
+- Auth: Bearer JWT (`user` or `admin`)
+- Content-Type: `application/json`
+- Payload:
+
+```json
+{
+  "currentPassword": "OldPass123",
+  "newPassword": "NewPass456"
 }
 ```
 
@@ -931,10 +974,11 @@ All `/admin/*` endpoints require:
 ```json
 {
   "id": 7,
-  "email": "student@univ.edu",
-  "full_name": "Student",
+  "email": "sinhvien@st.ueh.edu.vn",
+  "full_name": "Sinh Vien UEH",
   "role": "user",
   "is_locked": 0,
+  "must_change_password": 1,
   "created_at": "2026-01-01T00:00:00.000Z"
 }
 ```

@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { PostItem } from "../types";
 import { useAuthStore } from "../store/authStore";
 import { useAppStore } from "../store/appStore";
 import { addBookmarkApi, removeBookmarkApi } from "../services/api/bookmarkApi";
+import { listPostCommentsApi } from "../services/api/postApi";
 import { PostMediaGallery } from "./PostMediaGallery";
 
 interface PostCardProps {
@@ -24,24 +25,24 @@ function getInitials(name: string): string {
 function relativeTime(dateValue: string): string {
   const time = new Date(dateValue).getTime();
   if (!Number.isFinite(time)) {
-    return "just now";
+    return "vừa xong";
   }
 
   const diffSeconds = Math.max(1, Math.floor((Date.now() - time) / 1000));
   if (diffSeconds < 60) {
-    return `${diffSeconds}s ago`;
+    return `${diffSeconds} giây trước`;
   }
   const diffMinutes = Math.floor(diffSeconds / 60);
   if (diffMinutes < 60) {
-    return `${diffMinutes}m ago`;
+    return `${diffMinutes} phút trước`;
   }
   const diffHours = Math.floor(diffMinutes / 60);
   if (diffHours < 24) {
-    return `${diffHours}h ago`;
+    return `${diffHours} giờ trước`;
   }
   const diffDays = Math.floor(diffHours / 24);
   if (diffDays < 7) {
-    return `${diffDays}d ago`;
+    return `${diffDays} ngày trước`;
   }
   return new Date(dateValue).toLocaleDateString();
 }
@@ -50,12 +51,46 @@ export function PostCard({ post, showSocialActions = true }: PostCardProps) {
   const currentUserId = useAuthStore((state) => state.user?.id);
   const bookmarkedPostIds = useAppStore((state) => state.bookmarkedPostIds);
   const setBookmarkedPostIds = useAppStore((state) => state.setBookmarkedPostIds);
-  const ownerName = post.owner?.fullName ?? "Community Member";
-  const commentCount = 2 + ((post.id * 11) % 28);
-  const shareCount = 1 + ((post.id * 7) % 14);
-  const bookmarkBaseCount = 1 + ((post.id * 5) % 20);
+  const ownerName = post.owner?.fullName ?? "Thành viên cộng đồng";
+  const typeLabel = post.type === "lost" ? "THẤT LẠC" : "NHẶT ĐƯỢC";
+  const statusLabel =
+    post.status === "searching"
+      ? "Đang tìm"
+      : post.status === "found"
+        ? "Đã tìm thấy"
+        : "Đã trả lại";
+  const moderationLabel =
+    post.moderationStatus === "pending"
+      ? "Chờ duyệt"
+      : post.moderationStatus === "approved"
+        ? "Đã duyệt"
+        : "Từ chối";
   const isBookmarked = bookmarkedPostIds.includes(post.id);
   const [bookmarkLoading, setBookmarkLoading] = useState(false);
+  const [commentCount, setCommentCount] = useState<number | null>(null);
+  const [shareNotice, setShareNotice] = useState<"idle" | "done">("idle");
+
+  useEffect(() => {
+    let active = true;
+
+    void listPostCommentsApi(post.id)
+      .then((rows) => {
+        if (!active) {
+          return;
+        }
+        setCommentCount(rows.length);
+      })
+      .catch(() => {
+        if (!active) {
+          return;
+        }
+        setCommentCount(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [post.id]);
 
   async function handleToggleBookmark() {
     if (bookmarkLoading) {
@@ -78,11 +113,35 @@ export function PostCard({ post, showSocialActions = true }: PostCardProps) {
 
   async function handleSharePost(): Promise<void> {
     const postUrl = `${window.location.origin}/posts/${post.id}`;
+    const sharePayload = {
+      title: post.title,
+      text: post.description.slice(0, 140),
+      url: postUrl
+    };
+
     try {
-      await navigator.clipboard.writeText(postUrl);
-      alert("Post link copied to clipboard.");
+      if (typeof navigator.share === "function") {
+        await navigator.share(sharePayload);
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(postUrl);
+      } else {
+        window.prompt("Sao chép liên kết bài đăng:", postUrl);
+      }
+      setShareNotice("done");
+      window.setTimeout(() => setShareNotice("idle"), 1800);
     } catch {
-      window.prompt("Copy this post link:", postUrl);
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(postUrl);
+          setShareNotice("done");
+          window.setTimeout(() => setShareNotice("idle"), 1800);
+          return;
+        }
+      } catch {
+        // Ignore clipboard fallback errors and show prompt below.
+      }
+
+      window.prompt("Sao chép liên kết bài đăng:", postUrl);
     }
   }
 
@@ -94,21 +153,21 @@ export function PostCard({ post, showSocialActions = true }: PostCardProps) {
           <div>
             <p className="owner-name">{ownerName}</p>
             <p className="post-time">
-              {relativeTime(post.createdAt)} • {post.locationName ?? "Unknown location"}
+              {relativeTime(post.createdAt)} • {post.locationName ?? "Chưa rõ vị trí"}
             </p>
           </div>
         </div>
 
         <div className="post-top">
-          <span className={`chip chip-${post.type}`}>{post.type.toUpperCase()}</span>
-          <span className="chip">{post.status}</span>
-          <span className={`chip moderation-${post.moderationStatus}`}>{post.moderationStatus}</span>
+          <span className={`chip chip-${post.type}`}>{typeLabel}</span>
+          <span className="chip">{statusLabel}</span>
+          <span className={`chip moderation-${post.moderationStatus}`}>{moderationLabel}</span>
         </div>
       </div>
 
       {post.recommendationReason && (
         <p className="recommendation-pill">
-          For you • {post.recommendationReason}
+          Gợi ý cho bạn • {post.recommendationReason}
           {typeof post.recommendationScore === "number" && (
             <span className="recommend-score"> {post.recommendationScore.toFixed(2)}</span>
           )}
@@ -122,10 +181,14 @@ export function PostCard({ post, showSocialActions = true }: PostCardProps) {
       </h3>
       <p className="post-copy">{post.description}</p>
 
+      <div className="post-meta-line post-location-line">
+        <span>📍 {post.locationName ?? "Chưa rõ vị trí"}</span>
+        <span className="post-category-pill">🏷 {post.categoryName ?? `Category #${post.categoryId}`}</span>
+      </div>
+
       <PostMediaGallery post={post} />
 
       <div className="post-meta post-meta-line">
-        <span>{post.categoryName ?? `Category #${post.categoryId}`}</span>
         <span>{new Date(post.eventTime).toLocaleString()}</span>
       </div>
 
@@ -138,61 +201,46 @@ export function PostCard({ post, showSocialActions = true }: PostCardProps) {
       </div>
 
       {showSocialActions && (
-        <div className="social-actions">
-          <button
-            className="social-btn social-icon-btn"
-            type="button"
-            onClick={handleToggleBookmark}
-            disabled={bookmarkLoading}
-            data-tooltip={isBookmarked ? "Remove bookmark" : "Save bookmark"}
-            title={isBookmarked ? "Remove bookmark" : "Save bookmark"}
-          >
-            <span className="action-icon" aria-hidden="true">
-              🔖
-            </span>
-            <span className="action-count">{bookmarkBaseCount + (isBookmarked ? 1 : 0)}</span>
-          </button>
-
-          <Link
-            className="social-btn social-icon-btn"
-            to={`/posts/${post.id}`}
-            data-tooltip="Open comments"
-            title="Open comments"
-          >
-            <span className="action-icon" aria-hidden="true">
-              💬
-            </span>
-            <span className="action-count">{commentCount}</span>
-          </Link>
-
-          <button
-            className="social-btn social-icon-btn"
-            type="button"
-            onClick={() => void handleSharePost()}
-            data-tooltip="Share post"
-            title="Share post"
-          >
-            <span className="action-icon" aria-hidden="true">
-              ↗
-            </span>
-            <span className="action-count">{shareCount}</span>
-          </button>
-
-          {currentUserId !== post.userId && (
-            <Link
-              className="social-btn social-icon-btn action-link"
-              to={`/chat?postId=${post.id}&receiverId=${post.userId}`}
-              data-tooltip="Message owner"
-              title="Message owner"
+        <>
+          <div className="social-actions">
+            <button
+              className="social-btn"
+              type="button"
+              onClick={handleToggleBookmark}
+              disabled={bookmarkLoading}
+              title={isBookmarked ? "Bỏ lưu bài đăng" : "Lưu bài đăng"}
             >
-              <span className="action-icon" aria-hidden="true">
-                ✉
-              </span>
-              <span className="action-count">1</span>
+              🔖 {isBookmarked ? "Đã lưu" : "Lưu"}
+            </button>
+
+            <Link className="social-btn" to={`/posts/${post.id}#comments`} title="Mở phần bình luận">
+              💬 Bình luận{typeof commentCount === "number" ? ` (${commentCount})` : ""}
             </Link>
-          )}
-        </div>
+
+            <button className="social-btn" type="button" onClick={() => void handleSharePost()} title="Chia sẻ bài đăng">
+              ↗ {shareNotice === "done" ? "Đã chia sẻ" : "Chia sẻ"}
+            </button>
+
+            {currentUserId && currentUserId !== post.userId && (
+              <Link className="social-btn action-link" to={`/chat?postId=${post.id}&receiverId=${post.userId}`} title="Nhắn tin chủ bài đăng">
+                ✉ Nhắn tin
+              </Link>
+            )}
+          </div>
+        </>
       )}
+
+      <div className="post-footer-cta">
+        {currentUserId !== post.userId ? (
+          <Link className="post-contact-btn" to={`/chat?postId=${post.id}&receiverId=${post.userId}`}>
+            {post.type === "lost" ? "Tôi đã nhặt được vật phẩm này" : "Tôi nghĩ đây là vật của tôi"}
+          </Link>
+        ) : (
+          <Link className="post-contact-btn" to={`/posts/${post.id}`}>
+            Xem và cập nhật bài đăng
+          </Link>
+        )}
+      </div>
     </article>
   );
 }

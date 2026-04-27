@@ -44,28 +44,28 @@ function buildRecommendationReason(input: {
   const reasons: string[] = [];
 
   if (input.categoryAffinity >= 0.8) {
-    reasons.push("same category as your recent posts");
+    reasons.push("cung danh muc voi bai dang gan day cua ban");
   }
   if (input.locationAffinity >= 0.8) {
-    reasons.push("active in similar location");
+    reasons.push("cung khu vuc ban thuong xuyen hoat dong");
   }
   if (input.tagAffinity >= 0.35) {
-    reasons.push("matching item tags");
+    reasons.push("the mo ta trung khop");
   }
   if (input.popularTagBoost >= 0.55) {
-    reasons.push("includes popular community tags");
+    reasons.push("co the pho bien trong cong dong");
   }
   if (input.oppositeTypeBoost >= 0.95) {
-    reasons.push("complements your recent lost/found activity");
+    reasons.push("bo sung cho nhu cau that lac/nhat duoc cua ban");
   }
   if (reasons.length === 0 && input.recencyBonus >= 0.65) {
-    reasons.push("fresh and recently posted");
+    reasons.push("moi dang gan day");
   }
   if (reasons.length === 0) {
-    reasons.push("balanced relevance to your activity");
+    reasons.push("do phu hop can bang voi hanh vi cua ban");
   }
 
-  return `Recommended: ${reasons.slice(0, 2).join(" + ")}`;
+  return `Goi y: ${reasons.slice(0, 2).join(" + ")}`;
 }
 
 export async function createPostWorkflow(input: CreatePostInput): Promise<number> {

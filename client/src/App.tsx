@@ -11,6 +11,7 @@ import { ChatPage } from "./pages/ChatPage";
 import { MyPostsPage } from "./pages/MyPostsPage";
 import { AdminDashboardPage } from "./pages/AdminDashboardPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
+import { ChangePasswordPage } from "./pages/ChangePasswordPage";
 
 export function App() {
   const initialize = useAuthStore((state) => state.initialize);
@@ -22,7 +23,19 @@ export function App() {
 
   return (
     <Routes>
-      <Route path="/login" element={!user ? <LoginPage /> : <Navigate to="/" replace />} />
+      <Route
+        path="/login"
+        element={!user ? <LoginPage /> : <Navigate to={user.mustChangePassword ? "/doi-mat-khau" : "/"} replace />}
+      />
+
+      <Route
+        path="/doi-mat-khau"
+        element={
+          <ProtectedRoute>
+            <ChangePasswordPage />
+          </ProtectedRoute>
+        }
+      />
 
       <Route
         path="/"

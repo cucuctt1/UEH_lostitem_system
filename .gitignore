@@ -10,3 +10,4 @@ server/uploads/*
 !server/uploads/.gitkeep
 client/.vite/
 *.log
+/template/

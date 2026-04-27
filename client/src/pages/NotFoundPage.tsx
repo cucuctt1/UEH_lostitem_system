@@ -5,9 +5,9 @@ export function NotFoundPage() {
     <div className="auth-page">
       <div className="auth-card">
         <h1>404</h1>
-        <p>The page you requested does not exist.</p>
+        <p>Trang bạn yêu cầu không tồn tại.</p>
         <Link className="primary-btn" to="/">
-          Back to Home
+          Quay về trang chủ
         </Link>
       </div>
     </div>

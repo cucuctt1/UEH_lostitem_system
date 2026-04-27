@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS users (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   email VARCHAR(255) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
+  must_change_password TINYINT(1) NOT NULL DEFAULT 0,
   full_name VARCHAR(120) NOT NULL,
   phone VARCHAR(30) NULL,
   role ENUM('user', 'admin') NOT NULL DEFAULT 'user',

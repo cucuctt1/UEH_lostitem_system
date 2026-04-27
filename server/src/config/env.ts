@@ -5,6 +5,7 @@ dotenv.config();
 
 const envSchema = z.object({
   PORT: z.string().default("4000"),
+  TRUST_PROXY: z.string().default("false"),
   CLIENT_ORIGIN: z.string().default("http://localhost:5173"),
   CLIENT_ORIGINS: z.string().default(""),
   ALLOW_NGROK_ORIGINS: z.string().default("false"),
@@ -37,6 +38,7 @@ const extraOrigins = parsed.success
 
 export const env = {
   port: Number(parsed.data.PORT),
+  trustProxy: ["true", "1", "yes"].includes(parsed.data.TRUST_PROXY.trim().toLowerCase()),
   clientOrigin: parsed.data.CLIENT_ORIGIN,
   clientOrigins: Array.from(new Set([parsed.data.CLIENT_ORIGIN, ...extraOrigins])),
   allowNgrokOrigins: parsed.data.ALLOW_NGROK_ORIGINS.toLowerCase() === "true",

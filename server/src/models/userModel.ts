@@ -6,6 +6,7 @@ export interface UserRecord extends RowDataPacket {
   id: number;
   email: string;
   password_hash: string;
+  must_change_password: number;
   full_name: string;
   phone: string | null;
   avatar_url: string | null;
@@ -68,12 +69,13 @@ export interface UserSummary extends RowDataPacket {
   full_name: string;
   role: Role;
   is_locked: number;
+  must_change_password: number;
   created_at: string;
 }
 
 export async function listUsers(): Promise<UserSummary[]> {
   const [rows] = await dbPool.query<UserSummary[]>(
-    "SELECT id, email, full_name, role, is_locked, created_at FROM users ORDER BY created_at DESC"
+    "SELECT id, email, full_name, role, is_locked, must_change_password, created_at FROM users ORDER BY created_at DESC"
   );
   return rows;
 }
@@ -125,12 +127,22 @@ export async function createUser(
   email: string,
   passwordHash: string,
   fullName: string,
-  role: Role = "user"
+  role: Role = "user",
+  options?: { mustChangePassword?: boolean }
 ): Promise<number> {
+  const mustChangePassword = options?.mustChangePassword ? 1 : 0;
+
   const [result] = await dbPool.query<ResultSetHeader>(
-    "INSERT INTO users (email, password_hash, full_name, role) VALUES (?, ?, ?, ?)",
-    [email, passwordHash, fullName, role]
+    "INSERT INTO users (email, password_hash, full_name, role, must_change_password) VALUES (?, ?, ?, ?, ?)",
+    [email, passwordHash, fullName, role, mustChangePassword]
   );
 
   return result.insertId;
+}
+
+export async function updateUserPassword(userId: number, passwordHash: string): Promise<void> {
+  await dbPool.query(
+    "UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?",
+    [passwordHash, userId]
+  );
 }

@@ -185,7 +185,7 @@ export function HashtagInputOverlay({
       />
 
       {open && suggestions.length > 0 && (
-        <div className="hashtag-overlay" role="listbox" aria-label="Tag suggestions">
+        <div className="hashtag-overlay" role="listbox" aria-label="Gợi ý thẻ">
           {suggestions.map((suggestion, index) => (
             <button
               key={suggestion.id}
@@ -196,7 +196,7 @@ export function HashtagInputOverlay({
             >
               <span className="hashtag-option-tag">{suggestion.tag}</span>
               <span className="hashtag-option-meta">
-                {suggestion.isFrequent ? "Frequent" : suggestion.isPrebuilt ? "Prebuilt" : "Custom"} • {suggestion.useCount}
+                {suggestion.isFrequent ? "Phổ biến" : suggestion.isPrebuilt ? "Mặc định" : "Tự tạo"} • {suggestion.useCount}
               </span>
             </button>
           ))}

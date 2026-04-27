@@ -28,52 +28,55 @@ export function ProfilePage() {
     event.preventDefault();
     await apiClient.put("/users/me", { fullName, bio });
     await initialize();
-    alert("Profile updated");
+    alert("Đã cập nhật hồ sơ.");
   }
 
   return (
-    <AppShell title="My Profile">
+    <AppShell title="Hồ sơ của tôi">
       <section className="panel">
-        <h3>Profile Information</h3>
+        <h3>Thông tin cá nhân</h3>
         <form className="stack-form" onSubmit={handleUpdate}>
           <label>
-            Full Name
+            Họ và tên
             <input value={fullName} onChange={(event) => setFullName(event.target.value)} required />
           </label>
           <label>
-            Bio
+            Giới thiệu
             <textarea value={bio ?? ""} onChange={(event) => setBio(event.target.value)} />
           </label>
           <p>Email: {user?.email}</p>
-          <p>Phone visibility: hidden in public views, available in direct chat context.</p>
+          <p>Số điện thoại được ẩn trên bài đăng công khai, chỉ hiển thị trong ngữ cảnh chat hợp lệ.</p>
           <button className="secondary-btn" type="button" onClick={() => navigate("/my-posts")}>
-            Manage My Posts
+            Quản lý bài đăng của tôi
+          </button>
+          <button className="ghost-btn" type="button" onClick={() => navigate("/doi-mat-khau")}>
+            Đổi mật khẩu
           </button>
           <button className="primary-btn" type="submit">
-            Save Profile
+            Lưu hồ sơ
           </button>
         </form>
       </section>
 
       <section className="panel split-panel">
         <div>
-          <h3>Post History</h3>
+          <h3>Lịch sử bài đăng</h3>
           {history.posts.map((item) => (
             <div className="row-card" key={item.id}>
               <p>{item.title}</p>
               <small>
-                {item.type} / {item.status} / moderation: {item.moderation_status}
+                {item.type} / {item.status} / duyệt: {item.moderation_status}
               </small>
             </div>
           ))}
         </div>
 
         <div>
-          <h3>Return History</h3>
+          <h3>Lịch sử trả lại</h3>
           {history.returns.map((item) => (
             <div className="row-card" key={item.match_id}>
-              <p>Match #{item.match_id}</p>
-              <small>Score: {item.score} | Returned at: {item.returned_at || "-"}</small>
+              <p>Kết nối #{item.match_id}</p>
+              <small>Điểm: {item.score} | Trả lại lúc: {item.returned_at || "-"}</small>
             </div>
           ))}
         </div>

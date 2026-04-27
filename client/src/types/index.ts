@@ -5,6 +5,7 @@ export interface AuthUser {
   email: string;
   fullName: string;
   role: UserRole;
+  mustChangePassword: boolean;
   avatarUrl?: string | null;
   bio?: string | null;
   phone?: string | null;
@@ -19,12 +20,6 @@ export interface ApiEnvelope<T> {
 export interface LoginPayload {
   email: string;
   password: string;
-}
-
-export interface RegisterPayload {
-  email: string;
-  password: string;
-  fullName: string;
 }
 
 export interface PostItem {

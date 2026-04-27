@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
 import { PostCard } from "../components/PostCard";
@@ -10,6 +10,7 @@ import { useAppStore } from "../store/appStore";
 import { PostItem } from "../types";
 
 type FeedTab = "for-you" | "latest" | "lost" | "found";
+const FEED_BATCH_SIZE = 6;
 
 function parseHybridSearchQuery(query: string): { keyword?: string; tag?: string } {
   const normalized = query.trim();
@@ -44,6 +45,10 @@ export function HomePage() {
   const [activeTab, setActiveTab] = useState<FeedTab>("for-you");
   const [recommendedPosts, setRecommendedPosts] = useState<PostItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(FEED_BATCH_SIZE);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const feedSentinelRef = useRef<HTMLDivElement | null>(null);
+  const loadingMoreTimerRef = useRef<number | null>(null);
 
   async function loadDashboard(filters?: {
     keyword?: string;
@@ -71,6 +76,14 @@ export function HomePage() {
 
   useEffect(() => {
     void loadDashboard();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (loadingMoreTimerRef.current) {
+        window.clearTimeout(loadingMoreTimerRef.current);
+      }
+    };
   }, []);
 
   async function handleSearch(event: FormEvent) {
@@ -113,6 +126,46 @@ export function HomePage() {
     return posts.filter((post) => post.type === activeTab);
   }, [activeTab, forYouFeed, posts]);
 
+  const renderedPosts = useMemo(
+    () => visiblePosts.slice(0, visibleCount),
+    [visiblePosts, visibleCount]
+  );
+
+  const hasMorePosts = visibleCount < visiblePosts.length;
+
+  useEffect(() => {
+    setVisibleCount(FEED_BATCH_SIZE);
+    setLoadingMore(false);
+  }, [activeTab, visiblePosts.length]);
+
+  useEffect(() => {
+    if (!feedSentinelRef.current || loading || !hasMorePosts || loadingMore) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting) {
+          return;
+        }
+
+        setLoadingMore(true);
+        if (loadingMoreTimerRef.current) {
+          window.clearTimeout(loadingMoreTimerRef.current);
+        }
+
+        loadingMoreTimerRef.current = window.setTimeout(() => {
+          setVisibleCount((current) => Math.min(current + FEED_BATCH_SIZE, visiblePosts.length));
+          setLoadingMore(false);
+        }, 220);
+      },
+      { rootMargin: "240px 0px" }
+    );
+
+    observer.observe(feedSentinelRef.current);
+    return () => observer.disconnect();
+  }, [loading, hasMorePosts, loadingMore, visiblePosts.length]);
+
   const trendingTags = useMemo(() => {
     const tagCount = new Map<string, number>();
     for (const post of posts) {
@@ -134,78 +187,119 @@ export function HomePage() {
   }
 
   return (
-    <AppShell title="Community Feed">
+    <AppShell title="Bảng tin cộng đồng">
       <div className="timeline-layout">
         <div className="timeline-main">
+          <section className="panel quick-post-card">
+            <div className="quick-post-main">
+              <div className="quick-post-avatar">UEH</div>
+              <button className="quick-post-prompt" type="button" onClick={() => navigate("/posts/new")}>
+                Hôm nay bạn thất lạc hoặc nhặt được gì? Đăng bài để cộng đồng UEH hỗ trợ ngay.
+              </button>
+            </div>
+            <div className="quick-post-actions">
+              <button className="ghost-btn" type="button" onClick={() => navigate("/posts/new")}>Thất lạc</button>
+              <button className="ghost-btn" type="button" onClick={() => navigate("/posts/new")}>Nhặt được</button>
+              <button className="primary-btn" type="button" onClick={() => navigate("/posts/new")}>
+                Đăng bài ngay
+              </button>
+            </div>
+          </section>
+
           <section className="panel feed-composer">
             <div className="composer-header">
               <div>
-                <p className="auth-kicker">Campus Timeline</p>
-                <h3>Post updates like a social feed</h3>
+                <p className="auth-kicker">Bảng tin UEH</p>
+                <h3>Cập nhật thất lạc và nhặt được theo thời gian thực</h3>
                 <p className="hint-text">
-                  Share what you lost or found, and let the recommendation engine surface likely helpers.
+                  Đăng bài nhanh, tìm đúng người nhanh hơn nhờ gợi ý thông minh theo vị trí và thẻ.
                 </p>
               </div>
               <button className="primary-btn" onClick={() => navigate("/posts/new")}>
-                Create Post
+                Tạo bài đăng
               </button>
             </div>
             <div className="composer-meta">
-              <span className="badge">Ranking factors: category, location, tags, type intent, recency</span>
+              <span className="badge">Xếp hạng bởi danh mục, vị trí, thẻ, loại bài đăng và độ mới</span>
             </div>
           </section>
 
           <section className="panel">
             <form className="filter-grid feed-filter-grid" onSubmit={handleSearch}>
               <input
-                placeholder="Search text + #tag (e.g. wallet #id-card)"
+                placeholder="Tìm kiếm + #thẻ (vd: ví #thẻ-sv)"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
               />
               <select value={sort} onChange={(event) => setSort(event.target.value as any)}>
-                <option value="newest">Newest</option>
-                <option value="relevance">Relevance</option>
+                <option value="newest">Mới nhất</option>
+                <option value="relevance">Liên quan</option>
               </select>
               <button className="primary-btn" type="submit">
-                Search
+                Tìm
               </button>
               <button className="ghost-btn" type="button" onClick={resetFilters}>
-                Reset
+                Đặt lại
               </button>
             </form>
 
-            <div className="feed-tabs" role="tablist" aria-label="Feed tabs">
+            <div className="feed-tabs" role="tablist" aria-label="Bộ lọc bảng tin">
               <button
                 className={`feed-tab ${activeTab === "for-you" ? "active" : ""}`}
                 onClick={() => setActiveTab("for-you")}
               >
-                For You
+                Dành cho bạn
               </button>
               <button
                 className={`feed-tab ${activeTab === "latest" ? "active" : ""}`}
                 onClick={() => setActiveTab("latest")}
               >
-                Latest
+                Mới nhất
               </button>
               <button
                 className={`feed-tab ${activeTab === "lost" ? "active" : ""}`}
                 onClick={() => setActiveTab("lost")}
               >
-                Lost
+                Thất lạc
               </button>
               <button
                 className={`feed-tab ${activeTab === "found" ? "active" : ""}`}
                 onClick={() => setActiveTab("found")}
               >
-                Found
+                Nhặt được
               </button>
             </div>
           </section>
 
           <section className="feed-list">
-            {loading && <p>Loading feed...</p>}
-            {!loading && visiblePosts.length === 0 && <p>No posts found for the current filters.</p>}
-            {!loading && visiblePosts.map((post) => <PostCard key={post.id} post={post} />)}
+            {loading && <p>Đang tải bảng tin...</p>}
+            {!loading && visiblePosts.length === 0 && <p>Không tìm thấy bài đăng phù hợp bộ lọc hiện tại.</p>}
+            {!loading && renderedPosts.map((post) => <PostCard key={post.id} post={post} />)}
+
+            {!loading && visiblePosts.length > 0 && (
+              <div className="infinite-status">
+                <p className="hint-text">Hiển thị {renderedPosts.length}/{visiblePosts.length} bài đăng</p>
+
+                {hasMorePosts ? (
+                  <>
+                    <div ref={feedSentinelRef} className="feed-sentinel" aria-hidden="true" />
+                    {loadingMore ? (
+                      <p className="hint-text">Đang tải thêm bài đăng...</p>
+                    ) : (
+                      <button
+                        className="ghost-btn"
+                        type="button"
+                        onClick={() => setVisibleCount((current) => Math.min(current + FEED_BATCH_SIZE, visiblePosts.length))}
+                      >
+                        Tải thêm
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <p className="hint-text">Bạn đã xem hết bài đăng trong bộ lọc này.</p>
+                )}
+              </div>
+            )}
           </section>
         </div>
 
@@ -213,22 +307,22 @@ export function HomePage() {
           <StatusPanel matches={matches} notifications={notifications} />
 
           <section className="panel recommendation-rail">
-            <h3>Recommended For You</h3>
+            <h3>Gợi ý cho bạn</h3>
             <div className="mini-recommend-list">
               {recommendedPosts.slice(0, 6).map((post) => (
                 <Link key={post.id} to={`/posts/${post.id}`} className="mini-recommend-card">
                   <strong>{post.title}</strong>
-                  <small>{post.recommendationReason ?? "Related to your activity"}</small>
+                  <small>{post.recommendationReason ?? "Liên quan đến hành vi của bạn"}</small>
                 </Link>
               ))}
-              {recommendedPosts.length === 0 && <p className="hint-text">No recommendations yet.</p>}
+              {recommendedPosts.length === 0 && <p className="hint-text">Chưa có gợi ý nào.</p>}
             </div>
           </section>
 
           <section className="panel">
-            <h3>Trending Tags</h3>
+            <h3>Thẻ xu hướng</h3>
             <div className="trend-list">
-              {trendingTags.length === 0 && <p className="hint-text">Tags appear as users post items.</p>}
+              {trendingTags.length === 0 && <p className="hint-text">Thẻ sẽ xuất hiện khi người dùng bắt đầu đăng bài.</p>}
               {trendingTags.map(([trendTag, count]) => (
                 <button
                   key={trendTag}

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   adminCreateItemController,
+  adminCreateUserController,
   adminDeletePostController,
   adminListItemsController,
   adminListReportsController,
@@ -13,7 +14,7 @@ import {
 import { requireAuth } from "../middleware/auth";
 import { requireRole } from "../middleware/role";
 import { validateBody } from "../middleware/validate";
-import { approvePostSchema, lockUserSchema } from "../validators/adminValidators";
+import { approvePostSchema, createUserByAdminSchema, lockUserSchema } from "../validators/adminValidators";
 import { createStoredItemSchema, updateStoredItemStatusSchema } from "../validators/itemValidators";
 
 const router = Router();
@@ -22,6 +23,7 @@ router.use(requireAuth, requireRole("admin"));
 
 router.post("/approve-post", validateBody(approvePostSchema), approvePostController);
 router.post("/lock-user", validateBody(lockUserSchema), lockUserController);
+router.post("/users", validateBody(createUserByAdminSchema), adminCreateUserController);
 router.get("/users", listUsersController);
 router.delete("/posts/:id", adminDeletePostController);
 router.get("/reports", adminListReportsController);

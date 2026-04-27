@@ -1,12 +1,24 @@
 import { AppError } from "../utils/http";
 import { getPostById, setModerationStatus, softDeletePost } from "../models/postModel";
 import { createNotification } from "../models/notificationModel";
-import { listUsers, setUserLock } from "../models/userModel";
+import { createUser, findUserByEmail, findUserById, listUsers, setUserLock } from "../models/userModel";
 import { listReports, resolveReport } from "../models/reportModel";
 import { createStoredItem, listStoredItems, updateStoredItemStatus } from "../models/itemModel";
 import { recalculateMatchesForPost } from "./matchingService";
 import { Item, Report, User } from "../domain/entities";
 import { syncTagMetadata } from "./tagService";
+import bcrypt from "bcryptjs";
+
+const REQUIRED_EMAIL_DOMAIN = "@st.ueh.edu.vn";
+
+function normalizeSchoolEmail(email: string): string {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized.endsWith(REQUIRED_EMAIL_DOMAIN)) {
+    throw new AppError(400, "Email must end with @st.ueh.edu.vn");
+  }
+
+  return normalized;
+}
 
 export async function approvePost(postId: number, adminId: number, approved: boolean): Promise<void> {
   const post = await getPostById(postId);
@@ -36,12 +48,43 @@ export async function deletePostAsAdmin(postId: number): Promise<void> {
 }
 
 export async function lockUser(userId: number, locked: boolean): Promise<void> {
+  const user = await findUserById(userId);
+  if (!user) {
+    throw new AppError(404, "User not found");
+  }
+
+  if (user.role === "admin") {
+    throw new AppError(400, "Admin account cannot be locked");
+  }
+
   await setUserLock(userId, locked);
 }
 
 export async function getUsers() {
   const rows = await listUsers();
   return rows.map((row) => User.fromDb(row).toAdminView());
+}
+
+export async function createUserAsAdmin(input: {
+  fullName: string;
+  email: string;
+  temporaryPassword: string;
+}) {
+  const normalizedEmail = normalizeSchoolEmail(input.email);
+  const existing = await findUserByEmail(normalizedEmail);
+  if (existing) {
+    throw new AppError(409, "Email already exists");
+  }
+
+  const passwordHash = await bcrypt.hash(input.temporaryPassword, 10);
+  const userId = await createUser(normalizedEmail, passwordHash, input.fullName, "user", {
+    mustChangePassword: true
+  });
+
+  return {
+    userId,
+    email: normalizedEmail
+  };
 }
 
 export async function getReports(status?: "open" | "resolved") {

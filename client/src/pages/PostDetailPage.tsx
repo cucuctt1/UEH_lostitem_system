@@ -3,9 +3,15 @@ import { useNavigate, useParams } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
 import { HashtagInputOverlay } from "../components/HashtagInputOverlay";
 import { PostMediaGallery } from "../components/PostMediaGallery";
-import { deletePostApi, getPostApi, updatePostApi } from "../services/api/postApi";
+import {
+  createPostCommentApi,
+  deletePostApi,
+  getPostApi,
+  listPostCommentsApi,
+  updatePostApi
+} from "../services/api/postApi";
 import { createReportApi } from "../services/api/miscApi";
-import { PostItem } from "../types";
+import { PostCommentItem, PostItem } from "../types";
 import { useAuthStore } from "../store/authStore";
 
 export function PostDetailPage() {
@@ -24,6 +30,24 @@ export function PostDetailPage() {
   const [editTags, setEditTags] = useState("");
   const [editContactNote, setEditContactNote] = useState("");
   const [editImageFiles, setEditImageFiles] = useState<File[]>([]);
+  const [comments, setComments] = useState<PostCommentItem[]>([]);
+  const [commentText, setCommentText] = useState("");
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [sendingComment, setSendingComment] = useState(false);
+
+  const typeLabel = post?.type === "lost" ? "THẤT LẠC" : "NHẶT ĐƯỢC";
+  const statusLabel =
+    post?.status === "searching"
+      ? "Đang tìm"
+      : post?.status === "found"
+        ? "Đã tìm thấy"
+        : "Đã trả lại";
+  const moderationLabel =
+    post?.moderationStatus === "pending"
+      ? "Chờ duyệt"
+      : post?.moderationStatus === "approved"
+        ? "Đã duyệt"
+        : "Từ chối";
 
   useEffect(() => {
     if (!id) {
@@ -39,6 +63,24 @@ export function PostDetailPage() {
     });
   }, [id]);
 
+  async function loadComments(postId: number): Promise<void> {
+    setLoadingComments(true);
+    try {
+      const rows = await listPostCommentsApi(postId);
+      setComments(rows);
+    } finally {
+      setLoadingComments(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!id) {
+      return;
+    }
+
+    void loadComments(Number(id));
+  }, [id]);
+
   async function handleReport(event: FormEvent) {
     event.preventDefault();
     if (!post) {
@@ -52,7 +94,7 @@ export function PostDetailPage() {
     });
 
     setReportDetails("");
-    alert("Report submitted");
+    alert("Đã gửi báo cáo.");
   }
 
   async function handleOwnerUpdate(event: FormEvent) {
@@ -75,7 +117,7 @@ export function PostDetailPage() {
     const refreshed = await getPostApi(post.id);
     setPost(refreshed);
     setEditImageFiles([]);
-    alert("Post updated");
+    alert("Đã cập nhật bài đăng.");
   }
 
   async function handleOwnerDelete() {
@@ -83,7 +125,7 @@ export function PostDetailPage() {
       return;
     }
 
-    const confirmed = window.confirm("Delete this post?");
+    const confirmed = window.confirm("Bạn có chắc chắn muốn xóa bài đăng này?");
     if (!confirmed) {
       return;
     }
@@ -92,32 +134,53 @@ export function PostDetailPage() {
     navigate("/");
   }
 
+  async function handleSubmitComment(event: FormEvent): Promise<void> {
+    event.preventDefault();
+    if (!post || sendingComment) {
+      return;
+    }
+
+    const trimmed = commentText.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    setSendingComment(true);
+    try {
+      await createPostCommentApi(post.id, trimmed);
+      setCommentText("");
+      await loadComments(post.id);
+    } finally {
+      setSendingComment(false);
+    }
+  }
+
   if (!post) {
     return (
-      <AppShell title="Post Detail">
-        <p>Loading post...</p>
+      <AppShell title="Chi tiết bài đăng">
+        <p>Đang tải bài đăng...</p>
       </AppShell>
     );
   }
 
   return (
-    <AppShell title="Post Detail">
+    <AppShell title="Chi tiết bài đăng">
       <article className="panel post-detail">
         <div className="post-top">
-          <span className={`chip chip-${post.type}`}>{post.type.toUpperCase()}</span>
-          <span className="chip">{post.status}</span>
-          <span className={`chip moderation-${post.moderationStatus}`}>{post.moderationStatus}</span>
+          <span className={`chip chip-${post.type}`}>{typeLabel}</span>
+          <span className="chip">{statusLabel}</span>
+          <span className={`chip moderation-${post.moderationStatus}`}>{moderationLabel}</span>
         </div>
         <h3>{post.title}</h3>
         <p>{post.description}</p>
 
         <ul className="detail-list">
-          <li>Category: {post.categoryName}</li>
-          <li>Location: {post.locationName}</li>
-          <li>Time: {new Date(post.eventTime).toLocaleString()}</li>
-          <li>Posted by: {post.owner?.fullName}</li>
-          <li>Contact note: {post.contactNote || "No note"}</li>
-          <li>Phone policy: phone is hidden and only shown in private chat.</li>
+          <li>Danh mục: {post.categoryName}</li>
+          <li>Vị trí: {post.locationName}</li>
+          <li>Thời gian: {new Date(post.eventTime).toLocaleString()}</li>
+          <li>Người đăng: {post.owner?.fullName}</li>
+          <li>Ghi chú liên hệ: {post.contactNote || "Không có"}</li>
+          <li>Chính sách số điện thoại: ẩn trên trang công khai, chỉ hiển thị trong chat riêng tư.</li>
         </ul>
 
         <PostMediaGallery post={post} />
@@ -127,13 +190,13 @@ export function PostDetailPage() {
             className="primary-btn"
             onClick={() => navigate(`/chat?postId=${post.id}&receiverId=${post.userId}`)}
           >
-            Start Chat With Owner
+            Nhắn tin cho chủ bài đăng
           </button>
         )}
 
         {user?.id === post.userId && (
           <form className="stack-form" onSubmit={handleOwnerUpdate}>
-            <h4>Edit My Post</h4>
+            <h4>Chỉnh sửa bài đăng của tôi</h4>
             <input value={editTitle} onChange={(event) => setEditTitle(event.target.value)} required />
             <textarea
               value={editDescription}
@@ -141,23 +204,23 @@ export function PostDetailPage() {
               required
             />
             <select value={editStatus} onChange={(event) => setEditStatus(event.target.value as any)}>
-              <option value="searching">Searching</option>
-              <option value="found">Found</option>
-              <option value="returned">Returned</option>
+              <option value="searching">Đang tìm</option>
+              <option value="found">Đã tìm thấy</option>
+              <option value="returned">Đã trả lại</option>
             </select>
             <HashtagInputOverlay
               value={editTags}
               onChange={setEditTags}
-              placeholder="#backpack #charger"
+              placeholder="#ba-lo #sac-dien-thoai"
             />
-            <p className="hint-text">Type # then letters (e.g. #ba) to see overlay suggestions.</p>
+            <p className="hint-text">Gõ # và một vài ký tự để nhận gợi ý thẻ.</p>
             <input
-              placeholder="Contact note"
+              placeholder="Ghi chú liên hệ"
               value={editContactNote}
               onChange={(event) => setEditContactNote(event.target.value)}
             />
             <label>
-              Replace/Add Images
+              Thay thế/Thêm ảnh
               <input
                 type="file"
                 accept="image/*"
@@ -166,38 +229,69 @@ export function PostDetailPage() {
               />
             </label>
             {editImageFiles.length > 0 && (
-              <p className="hint-text">Selected {editImageFiles.length} image(s) for update.</p>
+              <p className="hint-text">Đã chọn {editImageFiles.length} ảnh để cập nhật.</p>
             )}
             <div className="button-group">
               <button className="primary-btn" type="submit">
-                Save Changes
+                Lưu thay đổi
               </button>
               <button className="danger-btn" type="button" onClick={handleOwnerDelete}>
-                Delete Post
+                Xóa bài đăng
               </button>
             </div>
           </form>
         )}
       </article>
 
+      <section className="panel" id="comments">
+        <h3>Bình luận</h3>
+        {loadingComments && <p className="hint-text">Đang tải bình luận...</p>}
+        {!loadingComments && comments.length === 0 && (
+          <p className="hint-text">Chưa có bình luận nào. Hãy là người đầu tiên bình luận.</p>
+        )}
+        {!loadingComments && comments.length > 0 && (
+          <div className="post-viewer-comment-list">
+            {comments.map((comment) => (
+              <div className="post-viewer-comment-item" key={comment.id}>
+                <strong>{comment.author.fullName}</strong>
+                <p>{comment.content}</p>
+                <small>{new Date(comment.createdAt).toLocaleString()}</small>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <form className="stack-form" onSubmit={handleSubmitComment}>
+          <textarea
+            value={commentText}
+            onChange={(event) => setCommentText(event.target.value)}
+            placeholder="Nhập nội dung bình luận"
+            maxLength={1000}
+          />
+          <button className="primary-btn" type="submit" disabled={sendingComment}>
+            {sendingComment ? "Đang đăng..." : "Đăng bình luận"}
+          </button>
+        </form>
+      </section>
+
       <section className="panel">
-        <h3>Report This Post/User</h3>
+        <h3>Báo cáo bài đăng/người dùng</h3>
         <form onSubmit={handleReport} className="stack-form">
           <select value={reportReason} onChange={(event) => setReportReason(event.target.value as any)}>
             <option value="spam">Spam</option>
-            <option value="fraud">Fraud</option>
-            <option value="abuse">Abuse</option>
-            <option value="unsafe">Unsafe</option>
-            <option value="other">Other</option>
+            <option value="fraud">Lừa đảo</option>
+            <option value="abuse">Xúc phạm</option>
+            <option value="unsafe">Không an toàn</option>
+            <option value="other">Khác</option>
           </select>
           <textarea
             value={reportDetails}
             onChange={(event) => setReportDetails(event.target.value)}
             required
-            placeholder="Describe the issue"
+            placeholder="Mô tả vấn đề"
           />
           <button className="secondary-btn" type="submit">
-            Submit Report
+            Gửi báo cáo
           </button>
         </form>
       </section>

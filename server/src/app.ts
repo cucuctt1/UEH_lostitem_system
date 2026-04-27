@@ -21,6 +21,11 @@ import bookmarkRoutes from "./routes/bookmarkRoutes";
 
 export const app = express();
 
+if (env.trustProxy) {
+  // Trust first reverse proxy hop (e.g., Nginx) for accurate client IP/protocol.
+  app.set("trust proxy", 1);
+}
+
 const allowedOrigins = new Set(env.clientOrigins);
 const localDevOriginPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(?::\d+)?$/;
 const ngrokOriginPattern = /^https?:\/\/[a-z0-9-]+\.(?:ngrok-free\.app|ngrok\.io)(?::\d+)?$/i;

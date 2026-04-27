@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import { AuthUser, LoginPayload, RegisterPayload } from "../types";
-import { loginApi, meApi, registerApi } from "../services/api/authApi";
+import { AuthUser, LoginPayload } from "../types";
+import { loginApi, meApi } from "../services/api/authApi";
 import {
   clearStoredUser,
   clearToken,
@@ -18,7 +18,6 @@ interface AuthState {
   error: string | null;
   initialize: () => Promise<void>;
   login: (payload: LoginPayload) => Promise<void>;
-  register: (payload: RegisterPayload) => Promise<void>;
   logout: () => void;
 }
 
@@ -55,21 +54,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       setStoredUser(data.user);
       set({ token: data.token, user: data.user, loading: false });
     } catch (error: any) {
-      set({ loading: false, error: error?.response?.data?.message ?? "Login failed" });
-      throw error;
-    }
-  },
-
-  register: async (payload) => {
-    set({ loading: true, error: null });
-    try {
-      clearAllCachedValues();
-      const data = await registerApi(payload);
-      setToken(data.token);
-      setStoredUser(data.user);
-      set({ token: data.token, user: data.user, loading: false });
-    } catch (error: any) {
-      set({ loading: false, error: error?.response?.data?.message ?? "Registration failed" });
+      set({ loading: false, error: error?.response?.data?.message ?? "Dang nhap that bai" });
       throw error;
     }
   },

@@ -14,6 +14,18 @@ export async function getUsersApi(): Promise<any[]> {
   return data.data;
 }
 
+export async function createUserByAdminApi(payload: {
+  fullName: string;
+  email: string;
+  temporaryPassword: string;
+}): Promise<{ userId: number; email: string }> {
+  const { data } = await apiClient.post<ApiEnvelope<{ userId: number; email: string }>>(
+    "/admin/users",
+    payload
+  );
+  return data.data;
+}
+
 export async function getReportsApi(): Promise<any[]> {
   const { data } = await apiClient.get<ApiEnvelope<any[]>>("/admin/reports");
   return data.data;

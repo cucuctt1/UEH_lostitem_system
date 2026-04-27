@@ -91,7 +91,7 @@ export function PostViewerOverlay({
             type="button"
             className="post-viewer-arrow left"
             onClick={() => setActiveIndex((prev) => (prev - 1 + totalImages) % totalImages)}
-            aria-label="Previous image"
+            aria-label="Ảnh trước"
           >
             ‹
           </button>
@@ -108,7 +108,7 @@ export function PostViewerOverlay({
             type="button"
             className="post-viewer-arrow right"
             onClick={() => setActiveIndex((prev) => (prev + 1) % totalImages)}
-            aria-label="Next image"
+            aria-label="Ảnh tiếp theo"
           >
             ›
           </button>
@@ -122,7 +122,7 @@ export function PostViewerOverlay({
           <header className="post-viewer-header">
             <h3>{post.title}</h3>
             <button type="button" className="ghost-btn" onClick={onClose}>
-              Close
+              Đóng
             </button>
           </header>
 
@@ -137,10 +137,10 @@ export function PostViewerOverlay({
           </div>
 
           <section className="post-viewer-comments">
-            <h4>Comments</h4>
-            {loadingComments && <p className="hint-text">Loading comments...</p>}
+            <h4>Bình luận</h4>
+            {loadingComments && <p className="hint-text">Đang tải bình luận...</p>}
             {!loadingComments && comments.length === 0 && (
-              <p className="hint-text">No comments yet. Be the first to comment.</p>
+              <p className="hint-text">Chưa có bình luận nào. Hãy là người đầu tiên bình luận.</p>
             )}
             {!loadingComments && comments.length > 0 && (
               <div className="post-viewer-comment-list">
@@ -159,11 +159,11 @@ export function PostViewerOverlay({
             <textarea
               value={commentText}
               onChange={(event) => setCommentText(event.target.value)}
-              placeholder="Write a comment"
+              placeholder="Nhập nội dung bình luận"
               maxLength={1000}
             />
             <button type="submit" className="primary-btn" disabled={sendingComment}>
-              {sendingComment ? "Posting..." : "Post Comment"}
+              {sendingComment ? "Đang đăng..." : "Đăng bình luận"}
             </button>
           </form>
         </aside>

@@ -1,11 +1,23 @@
 import bcrypt from "bcryptjs";
 import { signAccessToken } from "../config/jwt";
 import { AppError } from "../utils/http";
-import { createUser, findUserByEmail } from "../models/userModel";
+import { findUserByEmail } from "../models/userModel";
 import { AuthSession, User } from "../domain/entities";
 
+const REQUIRED_EMAIL_DOMAIN = "@st.ueh.edu.vn";
+
+function normalizeSchoolEmail(email: string): string {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized.endsWith(REQUIRED_EMAIL_DOMAIN)) {
+    throw new AppError(400, "Email must end with @st.ueh.edu.vn");
+  }
+
+  return normalized;
+}
+
 export async function login(email: string, password: string) {
-  const user = await findUserByEmail(email.toLowerCase());
+  const normalizedEmail = normalizeSchoolEmail(email);
+  const user = await findUserByEmail(normalizedEmail);
   if (!user) {
     throw new AppError(401, "Invalid email or password");
   }
@@ -27,29 +39,6 @@ export async function login(email: string, password: string) {
   });
 
   const userEntity = User.fromDb(user);
-  const session = new AuthSession(token, userEntity);
-
-  return session.toApiView();
-}
-
-export async function register(email: string, password: string, fullName: string) {
-  const normalizedEmail = email.toLowerCase();
-  const existing = await findUserByEmail(normalizedEmail);
-  if (existing) {
-    throw new AppError(409, "Email already exists");
-  }
-
-  const hash = await bcrypt.hash(password, 10);
-  const userId = await createUser(normalizedEmail, hash, fullName, "user");
-
-  const token = signAccessToken({
-    id: userId,
-    email: normalizedEmail,
-    role: "user",
-    fullName
-  });
-
-  const userEntity = new User(userId, normalizedEmail, fullName, "user");
   const session = new AuthSession(token, userEntity);
 
   return session.toApiView();

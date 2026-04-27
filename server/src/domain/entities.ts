@@ -207,7 +207,8 @@ export class User {
     public readonly avatarUrl: string | null = null,
     public readonly bio: string | null = null,
     public readonly createdAt: string | null = null,
-    public readonly isLocked: boolean = false
+    public readonly isLocked: boolean = false,
+    public readonly mustChangePassword: boolean = false
   ) {}
 
   static fromDb(row: any): User {
@@ -220,7 +221,8 @@ export class User {
       row.avatar_url ?? null,
       row.bio ?? null,
       row.created_at ?? null,
-      Number(row.is_locked ?? 0) === 1
+      Number(row.is_locked ?? 0) === 1,
+      Number(row.must_change_password ?? 0) === 1
     );
   }
 
@@ -231,7 +233,8 @@ export class User {
       fullName: this.fullName,
       role: this.role,
       avatarUrl: this.avatarUrl,
-      bio: this.bio
+      bio: this.bio,
+      mustChangePassword: this.mustChangePassword
     };
   }
 
@@ -244,7 +247,8 @@ export class User {
       role: this.role,
       avatarUrl: this.avatarUrl,
       bio: this.bio,
-      createdAt: this.createdAt
+      createdAt: this.createdAt,
+      mustChangePassword: this.mustChangePassword
     };
   }
 
@@ -255,6 +259,7 @@ export class User {
       full_name: this.fullName,
       role: this.role,
       is_locked: this.isLocked ? 1 : 0,
+      must_change_password: this.mustChangePassword ? 1 : 0,
       created_at: this.createdAt
     };
   }

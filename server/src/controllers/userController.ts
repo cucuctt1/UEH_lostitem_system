@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { asyncHandler, sendSuccess } from "../utils/http";
-import { getMyHistory, getMyProfile, updateMyProfile } from "../services/userService";
+import { changeMyPassword, getMyHistory, getMyProfile, updateMyProfile } from "../services/userService";
 
 export const meController = asyncHandler(async (request: Request, response: Response) => {
   const result = await getMyProfile(request.user!.id);
@@ -15,4 +15,9 @@ export const updateMeController = asyncHandler(async (request: Request, response
 export const myHistoryController = asyncHandler(async (request: Request, response: Response) => {
   const result = await getMyHistory(request.user!.id);
   sendSuccess(response, "Fetched user history", result);
+});
+
+export const changePasswordController = asyncHandler(async (request: Request, response: Response) => {
+  await changeMyPassword(request.user!.id, request.body.currentPassword, request.body.newPassword);
+  sendSuccess(response, "Password updated successfully");
 });

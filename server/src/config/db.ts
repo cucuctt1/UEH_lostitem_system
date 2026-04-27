@@ -46,10 +46,19 @@ export async function setupDatabaseIfEnabled(): Promise<void> {
 
   try {
     await bootstrapPool.query(schemaSql);
-    await bootstrapPool.query(seedSql);
 
     try {
       await bootstrapPool.query("ALTER TABLE posts ADD COLUMN image_urls_json JSON NULL AFTER image_url");
+    } catch (error: any) {
+      if (error?.code !== "ER_DUP_FIELDNAME") {
+        throw error;
+      }
+    }
+
+    try {
+      await bootstrapPool.query(
+        "ALTER TABLE users ADD COLUMN must_change_password TINYINT(1) NOT NULL DEFAULT 0 AFTER password_hash"
+      );
     } catch (error: any) {
       if (error?.code !== "ER_DUP_FIELDNAME") {
         throw error;
@@ -70,6 +79,8 @@ export async function setupDatabaseIfEnabled(): Promise<void> {
          INDEX idx_post_comments_created_at (created_at)
        )`
     );
+
+    await bootstrapPool.query(seedSql);
   } finally {
     await bootstrapPool.end();
   }

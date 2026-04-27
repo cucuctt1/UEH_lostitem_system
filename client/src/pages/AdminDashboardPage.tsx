@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { AppShell } from "../components/AppShell";
 import {
   approvePostApi,
+  createUserByAdminApi,
   createItemApi,
   getAnalyticsApi,
   getItemsApi,
@@ -22,6 +23,11 @@ export function AdminDashboardPage() {
   const [itemDescription, setItemDescription] = useState("");
   const [itemCategoryId, setItemCategoryId] = useState(1);
   const [itemLocationId, setItemLocationId] = useState(1);
+  const [accountFullName, setAccountFullName] = useState("");
+  const [accountEmail, setAccountEmail] = useState("");
+  const [temporaryPassword, setTemporaryPassword] = useState("");
+  const [accountMessage, setAccountMessage] = useState<string | null>(null);
+  const [creatingAccount, setCreatingAccount] = useState(false);
 
   async function loadAdminData() {
     const [allPosts, userRows, reportRows, itemRows, analyticRows] = await Promise.all([
@@ -68,25 +74,54 @@ export function AdminDashboardPage() {
     await loadAdminData();
   }
 
+  async function handleCreateAccount(event: FormEvent) {
+    event.preventDefault();
+    setAccountMessage(null);
+
+    if (!accountEmail.toLowerCase().endsWith("@st.ueh.edu.vn")) {
+      setAccountMessage("Email phai ket thuc bang @st.ueh.edu.vn.");
+      return;
+    }
+
+    setCreatingAccount(true);
+    try {
+      const result = await createUserByAdminApi({
+        fullName: accountFullName,
+        email: accountEmail,
+        temporaryPassword
+      });
+      setAccountFullName("");
+      setAccountEmail("");
+      setTemporaryPassword("");
+      setAccountMessage(`Da tao tai khoan: ${result.email}. Nguoi dung se phai doi mat khau khi dang nhap lan dau.`);
+      await loadAdminData();
+    } catch (error: any) {
+      setAccountMessage(error?.response?.data?.message ?? "Khong the tao tai khoan moi.");
+    } finally {
+      setCreatingAccount(false);
+    }
+  }
+
   return (
-    <AppShell title="Admin Dashboard">
+    <AppShell title="Bang dieu khien quan tri">
       <section className="status-panel">
         <div className="metric">
-          <h4>Total Posts</h4>
+          <h4>Tong bai dang</h4>
           <p>{analytics?.totals?.total_posts ?? 0}</p>
         </div>
         <div className="metric">
-          <h4>Return Success Rate</h4>
+          <h4>Ty le tra lai thanh cong</h4>
           <p>{analytics?.returnSuccessRate ?? 0}%</p>
         </div>
         <div className="metric">
-          <h4>Total Users</h4>
+          <h4>Tong nguoi dung</h4>
           <p>{analytics?.totals?.total_users ?? 0}</p>
         </div>
       </section>
 
       <section className="panel">
-        <h3>Pending Post Moderation</h3>
+        <h3>Cho duyet bai dang</h3>
+        {pendingPosts.length === 0 && <p className="hint-text">Khong co bai dang nao dang cho duyet.</p>}
         {pendingPosts.map((post) => (
           <div key={post.id} className="row-actions">
             <div>
@@ -97,10 +132,10 @@ export function AdminDashboardPage() {
             </div>
             <div className="button-group">
               <button className="primary-btn" onClick={() => moderatePost(post.id, true)}>
-                Approve
+                Duyet
               </button>
               <button className="danger-btn" onClick={() => moderatePost(post.id, false)}>
-                Reject
+                Tu choi
               </button>
             </div>
           </div>
@@ -109,7 +144,7 @@ export function AdminDashboardPage() {
 
       <section className="panel split-panel">
         <div>
-          <h3>User Management</h3>
+          <h3>Quan ly nguoi dung</h3>
           {users.map((entry) => (
             <div key={entry.id} className="row-actions">
               <div>
@@ -117,24 +152,58 @@ export function AdminDashboardPage() {
                 <small>
                   {entry.email} | {entry.role}
                 </small>
+                {entry.must_change_password === 1 && (
+                  <p className="hint-text">Can doi mat khau o lan dang nhap dau tien</p>
+                )}
               </div>
               <button
                 className="secondary-btn"
                 onClick={() => toggleUserLock(entry.id, entry.is_locked === 0)}
+                disabled={entry.role === "admin"}
               >
-                {entry.is_locked ? "Unlock" : "Lock"}
+                {entry.is_locked ? "Mo khoa" : "Khoa"}
               </button>
             </div>
           ))}
+
+          <h4>Tao tai khoan moi</h4>
+          <form className="stack-form" onSubmit={handleCreateAccount}>
+            <input
+              placeholder="Ho va ten"
+              value={accountFullName}
+              onChange={(event) => setAccountFullName(event.target.value)}
+              required
+            />
+            <input
+              type="email"
+              placeholder="Email sinh vien (vd: user@st.ueh.edu.vn)"
+              value={accountEmail}
+              onChange={(event) => setAccountEmail(event.target.value)}
+              required
+            />
+            <input
+              type="password"
+              placeholder="Mat khau tam thoi"
+              value={temporaryPassword}
+              onChange={(event) => setTemporaryPassword(event.target.value)}
+              minLength={8}
+              required
+            />
+            {accountMessage && <p className="hint-text">{accountMessage}</p>}
+            <button className="primary-btn" type="submit" disabled={creatingAccount}>
+              {creatingAccount ? "Dang tao..." : "Tao tai khoan nguoi dung"}
+            </button>
+          </form>
         </div>
 
         <div>
-          <h3>Reports Queue</h3>
+          <h3>Hang doi bao cao</h3>
+          {reports.length === 0 && <p className="hint-text">Chua co bao cao nao.</p>}
           {reports.map((report) => (
             <div key={report.id} className="row-card">
               <strong>{report.reason}</strong>
               <p>{report.details}</p>
-              <small>Status: {report.status}</small>
+              <small>Trang thai: {report.status}</small>
             </div>
           ))}
         </div>
@@ -142,37 +211,38 @@ export function AdminDashboardPage() {
 
       <section className="panel split-panel">
         <div>
-          <h3>Warehouse Items</h3>
+          <h3>Vat pham kho luu tru</h3>
+          {items.length === 0 && <p className="hint-text">Kho hien chua co vat pham nao.</p>}
           {items.map((item) => (
             <div key={item.id} className="row-card">
               <strong>{item.name}</strong>
               <small>
-                {item.status} | qty {item.quantity}
+                {item.status} | so luong {item.quantity}
               </small>
             </div>
           ))}
         </div>
 
         <div>
-          <h3>Add Warehouse Item</h3>
+          <h3>Them vat pham vao kho</h3>
           <form className="stack-form" onSubmit={handleCreateItem}>
             <input
               value={itemName}
               onChange={(event) => setItemName(event.target.value)}
-              placeholder="Item name"
+              placeholder="Ten vat pham"
               required
             />
             <textarea
               value={itemDescription}
               onChange={(event) => setItemDescription(event.target.value)}
-              placeholder="Description"
+              placeholder="Mo ta"
               required
             />
             <input
               type="number"
               value={itemCategoryId}
               onChange={(event) => setItemCategoryId(Number(event.target.value))}
-              placeholder="Category ID"
+              placeholder="ID danh muc"
               min={1}
               required
             />
@@ -180,12 +250,12 @@ export function AdminDashboardPage() {
               type="number"
               value={itemLocationId}
               onChange={(event) => setItemLocationId(Number(event.target.value))}
-              placeholder="Location ID"
+              placeholder="ID vi tri"
               min={1}
               required
             />
             <button className="primary-btn" type="submit">
-              Create Item
+              Tao vat pham
             </button>
           </form>
         </div>
