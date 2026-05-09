@@ -218,7 +218,7 @@ export function PostCard({ post, showSocialActions = true }: PostCardProps) {
             </button>
 
             <Link className="social-btn" to={`/posts/${post.id}#comments`} title="Mở phần bình luận">
-              💬 Bình luận{typeof commentCount === "number" ? ` (${commentCount})` : ""}
+              🗨 Bình luận{typeof commentCount === "number" ? ` (${commentCount})` : ""}
             </Link>
 
             <button className="social-btn" type="button" onClick={() => void handleSharePost()} title="Chia sẻ bài đăng">
