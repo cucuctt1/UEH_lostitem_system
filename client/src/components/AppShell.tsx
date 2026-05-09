@@ -143,9 +143,6 @@ export function AppShell({ title, children }: AppShellProps) {
           </nav>
 
           <div className="sidebar-footer">
-            <p className="hint-text sidebar-help">
-              Giao diện mới kết hợp bảng tin xã hội và bộ lọc theo ngữ cảnh UEH.
-            </p>
             <button className="secondary-btn" onClick={logoutAndGoLogin}>
               Đăng xuất
             </button>
