@@ -967,6 +967,15 @@ textarea {
   justify-content: center;
 }
 
+.notification-footer{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+/* .notification_btn{
+  align-items: end;
+  justify-content: end;
+} */
 .primary-btn,
 .link-btn {
   background: var(--primary);

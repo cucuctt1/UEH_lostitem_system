@@ -14,7 +14,9 @@ export async function listStoredItems(): Promise<RowDataPacket[]> {
 
 export async function createStoredItem(input: {
   name: string;
-  description: string;
+  description?: string | null;
+  senderName?: string | null;
+  senderStudentId?: string | null;
   categoryId: number;
   locationId: number;
   quantity: number;
@@ -24,11 +26,13 @@ export async function createStoredItem(input: {
 }): Promise<number> {
   const [result] = await dbPool.query<ResultSetHeader>(
     `INSERT INTO items (
-      name, description, category_id, location_id, quantity, status, post_id, managed_by
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      name, description, sender_name, sender_student_id, category_id, location_id, quantity, status, post_id, managed_by
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       input.name,
-      input.description,
+      input.description ?? null,
+      input.senderName ?? null,
+      input.senderStudentId ?? null,
       input.categoryId,
       input.locationId,
       input.quantity,
@@ -46,4 +50,46 @@ export async function updateStoredItemStatus(
   status: "stored" | "claimed" | "disposed"
 ): Promise<void> {
   await dbPool.query("UPDATE items SET status = ? WHERE id = ?", [status, itemId]);
+}
+
+export async function updateStoredItem(
+  itemId: number,
+  input: {
+    name: string;
+    description?: string | null;
+    senderName?: string | null;
+    senderStudentId?: string | null;
+    categoryId: number;
+    locationId: number;
+    quantity: number;
+    status: "stored" | "claimed" | "disposed";
+  }
+): Promise<void> {
+  await dbPool.query(
+    `UPDATE items
+     SET name = ?,
+         description = ?,
+         sender_name = ?,
+         sender_student_id = ?,
+         category_id = ?,
+         location_id = ?,
+         quantity = ?,
+         status = ?
+     WHERE id = ?`,
+    [
+      input.name,
+      input.description ?? null,
+      input.senderName ?? null,
+      input.senderStudentId ?? null,
+      input.categoryId,
+      input.locationId,
+      input.quantity,
+      input.status,
+      itemId
+    ]
+  );
+}
+
+export async function deleteStoredItem(itemId: number): Promise<void> {
+  await dbPool.query("DELETE FROM items WHERE id = ?", [itemId]);
 }

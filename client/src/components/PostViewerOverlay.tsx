@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { createPostCommentApi, listPostCommentsApi } from "../services/api/postApi";
 import { PostCommentItem, PostItem } from "../types";
+import { AppIcon } from "./AppIcon";
 
 interface PostViewerOverlayProps {
   post: PostItem;
@@ -106,7 +107,7 @@ export function PostViewerOverlay({
             onClick={() => setActiveIndex((prev) => (prev - 1 + totalImages) % totalImages)}
             aria-label="Ảnh trước"
           >
-            ‹
+            <AppIcon name="chevron-left" size={28} />
           </button>
 
           <img
@@ -123,7 +124,7 @@ export function PostViewerOverlay({
             onClick={() => setActiveIndex((prev) => (prev + 1) % totalImages)}
             aria-label="Ảnh tiếp theo"
           >
-            ›
+            <AppIcon name="chevron-right" size={28} />
           </button>
 
           <div className="post-viewer-index">

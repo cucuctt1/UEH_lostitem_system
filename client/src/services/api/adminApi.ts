@@ -31,7 +31,9 @@ export interface AdminReportRow {
 export interface AdminStoredItemRow {
   id: number;
   name: string;
-  description: string;
+  description: string | null;
+  sender_name: string | null;
+  sender_student_id: string | null;
   category_id: number;
   category_name?: string;
   location_id: number;
@@ -100,7 +102,9 @@ export async function getItemsApi(): Promise<AdminStoredItemRow[]> {
 
 export async function createItemApi(payload: {
   name: string;
-  description: string;
+  description?: string;
+  senderName?: string;
+  senderStudentId?: string;
   categoryId: number;
   locationId: number;
   quantity: number;
@@ -115,6 +119,26 @@ export async function updateItemStatusApi(
   status: "stored" | "claimed" | "disposed"
 ): Promise<void> {
   await apiClient.patch(`/admin/items/${itemId}/status`, { status });
+}
+
+export async function updateItemApi(
+  itemId: number,
+  payload: {
+    name: string;
+    description?: string;
+    senderName?: string;
+    senderStudentId?: string;
+    categoryId: number;
+    locationId: number;
+    quantity: number;
+    status: "stored" | "claimed" | "disposed";
+  }
+): Promise<void> {
+  await apiClient.put(`/admin/items/${itemId}`, payload);
+}
+
+export async function deleteItemApi(itemId: number): Promise<void> {
+  await apiClient.delete(`/admin/items/${itemId}`);
 }
 
 export async function getAnalyticsApi(): Promise<AnalyticsSummaryRow> {

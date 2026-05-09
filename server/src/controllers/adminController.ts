@@ -4,12 +4,14 @@ import {
   approvePost,
   createUserAsAdmin,
   createStoredItemAsAdmin,
+  deleteStoredItemAsAdmin,
   deletePostAsAdmin,
   getReports,
   getStoredItems,
   getUsers,
   lockUser,
   resolveReportAsAdmin,
+  updateStoredItemAsAdmin,
   updateStoredItemStatusAsAdmin
 } from "../services/adminService";
 
@@ -62,6 +64,8 @@ export const adminCreateItemController = asyncHandler(async (request: Request, r
   const itemId = await createStoredItemAsAdmin({
     name: request.body.name,
     description: request.body.description,
+    senderName: request.body.senderName,
+    senderStudentId: request.body.senderStudentId,
     categoryId: request.body.categoryId,
     locationId: request.body.locationId,
     quantity: request.body.quantity,
@@ -76,4 +80,23 @@ export const adminCreateItemController = asyncHandler(async (request: Request, r
 export const adminUpdateItemStatusController = asyncHandler(async (request: Request, response: Response) => {
   await updateStoredItemStatusAsAdmin(Number(request.params.id), request.body.status);
   sendSuccess(response, "Stored item status updated");
+});
+
+export const adminUpdateItemController = asyncHandler(async (request: Request, response: Response) => {
+  await updateStoredItemAsAdmin(Number(request.params.id), {
+    name: request.body.name,
+    description: request.body.description,
+    senderName: request.body.senderName,
+    senderStudentId: request.body.senderStudentId,
+    categoryId: request.body.categoryId,
+    locationId: request.body.locationId,
+    quantity: request.body.quantity,
+    status: request.body.status
+  });
+  sendSuccess(response, "Stored item updated");
+});
+
+export const adminDeleteItemController = asyncHandler(async (request: Request, response: Response) => {
+  await deleteStoredItemAsAdmin(Number(request.params.id));
+  sendSuccess(response, "Stored item deleted");
 });

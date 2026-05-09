@@ -2,6 +2,7 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { ReactNode, useEffect, useState } from "react";
 import { useAuthStore } from "../store/authStore";
 import { useAppStore } from "../store/appStore";
+import { AppIcon } from "./AppIcon";
 
 interface AppShellProps {
   title: string;
@@ -66,12 +67,12 @@ export function AppShell({ title, children }: AppShellProps) {
 
   const roleLabel = user?.role === "admin" ? "Quản trị viên" : "Người dùng";
   const menuEntries = [
-    { to: "/", label: "Bảng tin", icon: "⌕" },
-    { to: "/notifications", label: "Thông báo", icon: "◌" },
-    { to: "/posts/new", label: "Tạo bài đăng", icon: "✚" },
-    { to: "/my-posts", label: "Bài đăng của tôi", icon: "▣" },
-    { to: "/profile", label: "Hồ sơ", icon: "◉" },
-    { to: "/chat", label: "Tin nhắn", icon: "✉" }
+    { to: "/", label: "Bảng tin", icon: "search" as const },
+    { to: "/notifications", label: "Thông báo", icon: "bell" as const },
+    { to: "/posts/new", label: "Tạo bài đăng", icon: "plus" as const },
+    { to: "/my-posts", label: "Bài đăng của tôi", icon: "posts" as const },
+    { to: "/profile", label: "Hồ sơ", icon: "user" as const },
+    { to: "/chat", label: "Tin nhắn", icon: "mail" as const }
   ];
 
   return (
@@ -84,7 +85,13 @@ export function AppShell({ title, children }: AppShellProps) {
             aria-label={mobileSidebarOpen ? "Đóng menu" : "Mở menu"}
             type="button"
           >
-            {mobileViewport ? (mobileSidebarOpen ? "✕" : "☰") : sidebarCollapsed ? "☰" : "⟨"}
+            {mobileViewport ? (
+              mobileSidebarOpen ? <AppIcon name="close" size={18} /> : <AppIcon name="menu" size={18} />
+            ) : sidebarCollapsed ? (
+              <AppIcon name="menu" size={18} />
+            ) : (
+              <AppIcon name="chevron-left" size={18} />
+            )}
           </button>
 
           <button className="brand-lockup" onClick={() => navigate("/")}
@@ -143,7 +150,7 @@ export function AppShell({ title, children }: AppShellProps) {
             {menuEntries.map((entry) => (
               <NavLink key={entry.to} to={entry.to}>
                 <span className="menu-icon" aria-hidden="true">
-                  {entry.icon}
+                  <AppIcon name={entry.icon} size={16} />
                 </span>
                 <span className="menu-label">{entry.label}</span>
               </NavLink>
@@ -152,7 +159,7 @@ export function AppShell({ title, children }: AppShellProps) {
             {user?.role === "admin" && (
               <NavLink to="/admin">
                 <span className="menu-icon" aria-hidden="true">
-                  ⚙
+                  <AppIcon name="settings" size={16} />
                 </span>
                 <span className="menu-label">Quản trị</span>
               </NavLink>

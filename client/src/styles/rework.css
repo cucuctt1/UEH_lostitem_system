@@ -54,6 +54,19 @@ textarea:focus-visible {
   outline-offset: 2px;
 }
 
+.ui-icon {
+  width: 1em;
+  height: 1em;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.icon-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 h1,
 h2,
 h3,
@@ -207,6 +220,11 @@ h4,
   color: var(--ui-primary);
   border-radius: 12px;
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  min-height: 42px;
 }
 
 .top-menu-btn {
@@ -333,6 +351,7 @@ h4,
   border: 1px solid transparent;
   color: var(--ui-ink);
   font-weight: 600;
+  min-height: 44px;
 }
 
 .menu a.active,
@@ -341,18 +360,40 @@ h4,
   background: rgba(0, 95, 105, 0.1);
   color: var(--ui-primary-strong);
 }
-
 .menu-icon {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   display: grid;
   place-items: center;
   border-radius: 8px;
   background: rgba(0, 95, 105, 0.08);
-  font-size: 0.82rem;
-  font-weight: 800;
+  color: #0b5d66;
 }
 
+.menu-icon .ui-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.sidebar.collapsed .menu-label {
+  display: none;
+}
+
+.sidebar.collapsed .menu-icon {
+  width: 34px;
+  height: 34px;
+  background: rgba(0, 95, 105, 0.16);
+}
+/* allow icon to display*/
+.sidebar.collapsed .menu a {
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    
+}
 .sidebar-help {
   color: #56777d;
   margin: 0;
@@ -373,11 +414,11 @@ h4,
 .sidebar.collapsed .sidebar-brand-line {
   justify-content: center;
 }
-
-.sidebar.collapsed .menu a {
-  justify-content: center;
-  padding-left: 8px;
-  padding-right: 8px;
+.sidebar.collapsed .menu {
+  display: flex;
+  flex-direction: column;
+  justify-items: center;
+  height: 80%;
 }
 
 .content {
@@ -935,6 +976,10 @@ textarea:focus {
 
 .admin-table-panel {
   overflow-x: auto;
+}
+
+.storage-table-wrap {
+  margin-top: 10px;
 }
 
 .admin-locations-table td,

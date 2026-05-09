@@ -100,7 +100,9 @@ type DbReportRow = {
 type DbItemRow = {
   id: number;
   name: string;
-  description: string;
+  description?: string | null;
+  sender_name?: string | null;
+  sender_student_id?: string | null;
   category_id: number;
   category_name?: string;
   location_id: number;
@@ -602,7 +604,9 @@ export class Item {
   constructor(
     public readonly id: number,
     public readonly name: string,
-    public readonly description: string,
+    public readonly description: string | null,
+    public readonly senderName: string | null,
+    public readonly senderStudentId: string | null,
     public readonly categoryId: number,
     public readonly locationId: number,
     public readonly quantity: number,
@@ -619,7 +623,9 @@ export class Item {
     return new Item(
       row.id,
       row.name,
-      row.description,
+      row.description ?? null,
+      row.sender_name ?? null,
+      row.sender_student_id ?? null,
       row.category_id,
       row.location_id,
       Number(row.quantity),
@@ -638,6 +644,8 @@ export class Item {
       id: this.id,
       name: this.name,
       description: this.description,
+      sender_name: this.senderName,
+      sender_student_id: this.senderStudentId,
       category_id: this.categoryId,
       category_name: this.categoryName,
       location_id: this.locationId,

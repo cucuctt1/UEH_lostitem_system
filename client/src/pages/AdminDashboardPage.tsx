@@ -2,8 +2,8 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
 import { listPostsApi } from "../services/api/postApi";
-import { listLocationsApi } from "../services/api/miscApi";
-import { Location, PostItem } from "../types";
+import { listCategoriesApi, listLocationsApi } from "../services/api/miscApi";
+import { Category, Location, PostItem } from "../types";
 import {
   AdminReportRow,
   AdminStoredItemRow,
@@ -12,12 +12,14 @@ import {
   approvePostApi,
   createItemApi,
   createUserByAdminApi,
+  deleteItemApi,
   getAnalyticsApi,
   getItemsApi,
   getReportsApi,
   getUsersApi,
   lockUserApi,
-  resolveReportApi
+  resolveReportApi,
+  updateItemApi
 } from "../services/api/adminApi";
 
 type AdminSection = "dashboard" | "locations" | "disputes";
@@ -91,6 +93,16 @@ function formatDateTime(dateValue: string | null): string {
     return "--";
   }
   return new Date(dateValue).toLocaleString("vi-VN");
+}
+
+function formatStorageStatus(status: "stored" | "claimed" | "disposed"): string {
+  if (status === "claimed") {
+    return "Đã trao trả";
+  }
+  if (status === "disposed") {
+    return "Đã thanh lý";
+  }
+  return "Chưa trao trả";
 }
 
 function dayKey(input: Date): string {
@@ -204,16 +216,25 @@ export function AdminDashboardPage() {
   const [reports, setReports] = useState<AdminReportRow[]>([]);
   const [items, setItems] = useState<AdminStoredItemRow[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsSummaryRow | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
 
   const [locationQuery, setLocationQuery] = useState("");
   const [disputeFilter, setDisputeFilter] = useState<"all" | "open" | "resolved">("all");
   const [resolvingReportId, setResolvingReportId] = useState<number | null>(null);
 
-  const [itemName, setItemName] = useState("");
-  const [itemDescription, setItemDescription] = useState("");
-  const [itemCategoryId, setItemCategoryId] = useState(1);
-  const [itemLocationId, setItemLocationId] = useState(1);
+  const [storageName, setStorageName] = useState("");
+  const [storageDescription, setStorageDescription] = useState("");
+  const [storageSenderName, setStorageSenderName] = useState("");
+  const [storageSenderStudentId, setStorageSenderStudentId] = useState("");
+  const [storageCategoryId, setStorageCategoryId] = useState<number | "">("");
+  const [storageLocationId, setStorageLocationId] = useState<number | "">("");
+  const [storageStatus, setStorageStatus] = useState<"stored" | "claimed">("stored");
+  const [editingStorageId, setEditingStorageId] = useState<number | null>(null);
+  const [submittingStorage, setSubmittingStorage] = useState(false);
+  const [deletingStorageId, setDeletingStorageId] = useState<number | null>(null);
+  const [storageKeyword, setStorageKeyword] = useState("");
+  const [storageMessage, setStorageMessage] = useState<string | null>(null);
 
   const [accountFullName, setAccountFullName] = useState("");
   const [accountEmail, setAccountEmail] = useState("");
@@ -225,13 +246,14 @@ export function AdminDashboardPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const [postRows, userRows, reportRows, itemRows, analyticRows, locationRows] = await Promise.all([
+      const [postRows, userRows, reportRows, itemRows, analyticRows, locationRows, categoryRows] = await Promise.all([
         listPostsApi(),
         getUsersApi(),
         getReportsApi(),
         getItemsApi(),
         getAnalyticsApi(),
-        listLocationsApi()
+        listLocationsApi(),
+        listCategoriesApi()
       ]);
 
       setAllPosts(postRows);
@@ -240,6 +262,13 @@ export function AdminDashboardPage() {
       setItems(itemRows);
       setAnalytics(analyticRows);
       setLocations(locationRows);
+      setCategories(categoryRows);
+      if (!storageLocationId && locationRows[0]) {
+        setStorageLocationId(locationRows[0].id);
+      }
+      if (!storageCategoryId && categoryRows[0]) {
+        setStorageCategoryId(categoryRows[0].id);
+      }
       setLastUpdatedAt(new Date().toISOString());
     } catch (loadError) {
       setError(extractErrorMessage(loadError, "Không thể tải dữ liệu quản trị."));
@@ -282,19 +311,86 @@ export function AdminDashboardPage() {
     }
   }
 
-  async function handleCreateItem(event: FormEvent): Promise<void> {
+  function resetStorageForm(): void {
+    setEditingStorageId(null);
+    setStorageName("");
+    setStorageDescription("");
+    setStorageSenderName("");
+    setStorageSenderStudentId("");
+    setStorageStatus("stored");
+    if (categories[0]) {
+      setStorageCategoryId(categories[0].id);
+    }
+    if (locations[0]) {
+      setStorageLocationId(locations[0].id);
+    }
+  }
+
+  function startEditStorage(item: AdminStoredItemRow): void {
+    setEditingStorageId(item.id);
+    setStorageName(item.name);
+    setStorageDescription(item.description ?? "");
+    setStorageSenderName(item.sender_name ?? "");
+    setStorageSenderStudentId(item.sender_student_id ?? "");
+    setStorageCategoryId(item.category_id);
+    setStorageLocationId(item.location_id);
+    setStorageStatus(item.status === "claimed" ? "claimed" : "stored");
+    setStorageMessage(null);
+  }
+
+  async function handleSubmitStorage(event: FormEvent): Promise<void> {
     event.preventDefault();
-    await createItemApi({
-      name: itemName,
-      description: itemDescription,
-      categoryId: itemCategoryId,
-      locationId: itemLocationId,
-      quantity: 1,
-      status: "stored"
-    });
-    setItemName("");
-    setItemDescription("");
-    await loadAdminData();
+    setStorageMessage(null);
+    if (!storageCategoryId || !storageLocationId) {
+      setStorageMessage("Vui lòng chọn danh mục và địa điểm.");
+      return;
+    }
+
+    setSubmittingStorage(true);
+    try {
+      const payload = {
+        name: storageName.trim(),
+        description: storageDescription.trim() || undefined,
+        senderName: storageSenderName.trim() || undefined,
+        senderStudentId: storageSenderStudentId.trim() || undefined,
+        categoryId: Number(storageCategoryId),
+        locationId: Number(storageLocationId),
+        quantity: 1,
+        status: storageStatus
+      };
+
+      if (editingStorageId) {
+        await updateItemApi(editingStorageId, payload);
+        setStorageMessage("Đã cập nhật vật phẩm lưu kho.");
+      } else {
+        await createItemApi(payload);
+        setStorageMessage("Đã thêm vật phẩm lưu kho.");
+      }
+      resetStorageForm();
+      await loadAdminData();
+    } catch (requestError) {
+      setStorageMessage(extractErrorMessage(requestError, "Không thể lưu dữ liệu vật phẩm."));
+    } finally {
+      setSubmittingStorage(false);
+    }
+  }
+
+  async function handleDeleteStorage(item: AdminStoredItemRow): Promise<void> {
+    const confirmed = window.confirm(`Bạn có chắc chắn muốn xóa vật phẩm "${item.name}"?`);
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingStorageId(item.id);
+    try {
+      await deleteItemApi(item.id);
+      if (editingStorageId === item.id) {
+        resetStorageForm();
+      }
+      await loadAdminData();
+    } finally {
+      setDeletingStorageId(null);
+    }
   }
 
   async function handleCreateAccount(event: FormEvent): Promise<void> {
@@ -344,6 +440,28 @@ export function AdminDashboardPage() {
       (entry) => entry.name.toLowerCase().includes(keyword) || entry.building.toLowerCase().includes(keyword)
     );
   }, [locationInsights, locationQuery]);
+
+  const filteredStorageItems = useMemo(() => {
+    const keyword = storageKeyword.trim().toLowerCase();
+    if (!keyword) {
+      return items;
+    }
+
+    return items.filter((item) => {
+      const source = [
+        item.name,
+        item.description ?? "",
+        item.sender_name ?? "",
+        item.sender_student_id ?? "",
+        item.location_name ?? "",
+        item.category_name ?? ""
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return source.includes(keyword);
+    });
+  }, [items, storageKeyword]);
 
   const weekTrend = useMemo(() => buildWeekTrend(allPosts), [allPosts]);
   const reportLine = weekTrend.map((entry) => entry.reported);
@@ -609,40 +727,125 @@ export function AdminDashboardPage() {
                 </div>
 
                 <div>
-                  <h3>Thêm vật phẩm lưu kho</h3>
-                  <form className="stack-form" onSubmit={(event) => void handleCreateItem(event)}>
+                  <h3>Storage Manager</h3>
+                  <p className="hint-text">Quản lý vật phẩm đã nhận, cập nhật trạng thái trao trả và thông tin người gửi.</p>
+
+                  <form className="stack-form" onSubmit={(event) => void handleSubmitStorage(event)}>
                     <input
-                      value={itemName}
-                      onChange={(event) => setItemName(event.target.value)}
+                      value={storageKeyword}
+                      onChange={(event) => setStorageKeyword(event.target.value)}
+                      placeholder="Tìm vật phẩm theo tên, người gửi, MSSV..."
+                    />
+                    <input
+                      value={storageName}
+                      onChange={(event) => setStorageName(event.target.value)}
                       placeholder="Tên vật phẩm"
                       required
                     />
                     <textarea
-                      value={itemDescription}
-                      onChange={(event) => setItemDescription(event.target.value)}
-                      placeholder="Mô tả vật phẩm"
-                      required
+                      value={storageDescription}
+                      onChange={(event) => setStorageDescription(event.target.value)}
+                      placeholder="Mô tả vật phẩm (không bắt buộc)"
                     />
                     <input
-                      type="number"
-                      value={itemCategoryId}
-                      onChange={(event) => setItemCategoryId(Number(event.target.value))}
-                      placeholder="ID danh mục"
-                      min={1}
-                      required
+                      value={storageSenderName}
+                      onChange={(event) => setStorageSenderName(event.target.value)}
+                      placeholder="Người gửi - Họ tên (không bắt buộc)"
                     />
                     <input
-                      type="number"
-                      value={itemLocationId}
-                      onChange={(event) => setItemLocationId(Number(event.target.value))}
-                      placeholder="ID địa điểm"
-                      min={1}
-                      required
+                      value={storageSenderStudentId}
+                      onChange={(event) => setStorageSenderStudentId(event.target.value)}
+                      placeholder="Người gửi - MSSV (không bắt buộc)"
                     />
-                    <button className="primary-btn" type="submit">
-                      Tạo vật phẩm
-                    </button>
+                    <select
+                      value={storageCategoryId}
+                      onChange={(event) => setStorageCategoryId(Number(event.target.value))}
+                      required
+                    >
+                      {categories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={storageLocationId}
+                      onChange={(event) => setStorageLocationId(Number(event.target.value))}
+                      required
+                    >
+                      {locations.map((location) => (
+                        <option key={location.id} value={location.id}>
+                          {location.name}
+                        </option>
+                      ))}
+                    </select>
+                    <select value={storageStatus} onChange={(event) => setStorageStatus(event.target.value as "stored" | "claimed")}>
+                      <option value="stored">Chưa trao trả</option>
+                      <option value="claimed">Đã trao trả</option>
+                    </select>
+
+                    {storageMessage && <p className="hint-text">{storageMessage}</p>}
+
+                    <div className="button-group">
+                      <button className="primary-btn" type="submit" disabled={submittingStorage}>
+                        {submittingStorage ? "Đang lưu..." : editingStorageId ? "Lưu cập nhật" : "Thêm vật phẩm"}
+                      </button>
+                      {editingStorageId && (
+                        <button className="ghost-btn" type="button" onClick={resetStorageForm}>
+                          Hủy chỉnh sửa
+                        </button>
+                      )}
+                    </div>
                   </form>
+
+                  <div className="admin-table-panel storage-table-wrap">
+                    <table className="table-basic admin-locations-table">
+                      <thead>
+                        <tr>
+                          <th>Tên vật phẩm</th>
+                          <th>Người gửi</th>
+                          <th>MSSV</th>
+                          <th>Trạng thái</th>
+                          <th>Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredStorageItems.length === 0 && (
+                          <tr>
+                            <td colSpan={5} className="hint-text">
+                              Không có vật phẩm phù hợp.
+                            </td>
+                          </tr>
+                        )}
+                        {filteredStorageItems.map((item) => (
+                          <tr key={item.id}>
+                            <td>
+                              <strong>{item.name}</strong>
+                              {item.description && <p className="hint-text">{item.description}</p>}
+                            </td>
+                            <td>{item.sender_name || "--"}</td>
+                            <td>{item.sender_student_id || "--"}</td>
+                            <td>{formatStorageStatus(item.status)}</td>
+                            <td>
+                              <div className="admin-inline-actions">
+                                <button className="ghost-btn" type="button" onClick={() => startEditStorage(item)}>
+                                  Sửa
+                                </button>
+                                <button
+                                  className="danger-btn"
+                                  type="button"
+                                  onClick={() => void handleDeleteStorage(item)}
+                                  disabled={deletingStorageId === item.id}
+                                >
+                                  {deletingStorageId === item.id ? "Đang xóa..." : "Xóa"}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </section>
             </div>

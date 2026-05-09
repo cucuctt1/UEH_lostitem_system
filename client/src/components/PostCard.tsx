@@ -6,6 +6,7 @@ import { useAppStore } from "../store/appStore";
 import { addBookmarkApi, removeBookmarkApi } from "../services/api/bookmarkApi";
 import { listPostCommentsApi } from "../services/api/postApi";
 import { PostMediaGallery } from "./PostMediaGallery";
+import { AppIcon } from "./AppIcon";
 
 interface PostCardProps {
   post: PostItem;
@@ -151,7 +152,10 @@ export function PostCard({ post, showSocialActions = true }: PostCardProps) {
   }
 
   return (
-    <article className={`post-card social-post ${post.recommendationScore ? "recommended-post" : ""}`}>
+    <article className={`post-card social-post ${post.recommendationScore ? "recommended-post" : ""}`} onClick={(e) => {// click to go to post detail, but ignore clicks on links and buttons inside the card
+      const target = e.target as HTMLElement;
+      window.location.href = `/posts/${post.id}`;
+    }}>
       <div className="post-header">
         <div className="post-author">
           <div className="avatar-badge">{getInitials(ownerName)}</div>
@@ -187,8 +191,14 @@ export function PostCard({ post, showSocialActions = true }: PostCardProps) {
       <p className="post-copy">{post.description}</p>
 
       <div className="post-meta-line post-location-line">
-        <span>📍 {post.locationName ?? "Chưa rõ vị trí"}</span>
-        <span className="post-category-pill">🏷 {post.categoryName ?? `Category #${post.categoryId}`}</span>
+        <span className="icon-text">
+          <AppIcon name="map-pin" size={15} />
+          {post.locationName ?? "Chưa rõ vị trí"}
+        </span>
+        <span className="post-category-pill icon-text">
+          <AppIcon name="tag" size={14} />
+          {post.categoryName ?? `Category #${post.categoryId}`}
+        </span>
       </div>
 
       <PostMediaGallery post={post} />
@@ -219,20 +229,24 @@ export function PostCard({ post, showSocialActions = true }: PostCardProps) {
               disabled={bookmarkLoading}
               title={isBookmarked ? "Bỏ lưu bài đăng" : "Lưu bài đăng"}
             >
-              🔖 {bookmarkLoading ? "Đang xử lý..." : isBookmarked ? "Đã lưu" : "Lưu"}
+              <AppIcon name="bookmark" size={15} />
+              {bookmarkLoading ? "Đang xử lý..." : isBookmarked ? "Đã lưu" : "Lưu"}
             </button>
 
             <Link className="social-btn" to={`/posts/${post.id}#comments`} title="Mở phần bình luận">
-              🗨 Bình luận{typeof commentCount === "number" ? ` (${commentCount})` : ""}
+              <AppIcon name="message-circle" size={15} />
+              Bình luận{typeof commentCount === "number" ? ` ${commentCount}` : ""}
             </Link>
 
             <button className="social-btn" type="button" onClick={() => void handleSharePost()} title="Chia sẻ bài đăng">
-              ↗ {shareNotice === "done" ? "Đã chia sẻ" : "Chia sẻ"}
+              <AppIcon name="share" size={15} />
+              {shareNotice === "done" ? "Đã chia sẻ" : "Chia sẻ"}
             </button>
 
             {currentUserId && currentUserId !== post.userId && (
               <Link className="social-btn action-link" to={`/chat?postId=${post.id}&receiverId=${post.userId}`} title="Nhắn tin chủ bài đăng">
-                ✉ Nhắn tin
+                <AppIcon name="mail" size={15} />
+                Nhắn tin
               </Link>
             )}
           </div>

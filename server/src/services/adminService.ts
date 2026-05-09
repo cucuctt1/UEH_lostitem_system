@@ -3,7 +3,13 @@ import { getPostById, setModerationStatus, softDeletePost } from "../models/post
 import { createNotification } from "../models/notificationModel";
 import { createUser, findUserByEmail, findUserById, listUsers, setUserLock } from "../models/userModel";
 import { listReports, resolveReport } from "../models/reportModel";
-import { createStoredItem, listStoredItems, updateStoredItemStatus } from "../models/itemModel";
+import {
+  createStoredItem,
+  deleteStoredItem,
+  listStoredItems,
+  updateStoredItem,
+  updateStoredItemStatus
+} from "../models/itemModel";
 import { recalculateMatchesForPost } from "./matchingService";
 import { Item, Report, User } from "../domain/entities";
 import { syncTagMetadata } from "./tagService";
@@ -103,7 +109,9 @@ export async function getStoredItems() {
 
 export async function createStoredItemAsAdmin(input: {
   name: string;
-  description: string;
+  description?: string | null;
+  senderName?: string | null;
+  senderStudentId?: string | null;
   categoryId: number;
   locationId: number;
   quantity: number;
@@ -119,4 +127,24 @@ export async function updateStoredItemStatusAsAdmin(
   status: "stored" | "claimed" | "disposed"
 ): Promise<void> {
   await updateStoredItemStatus(itemId, status);
+}
+
+export async function updateStoredItemAsAdmin(
+  itemId: number,
+  input: {
+    name: string;
+    description?: string | null;
+    senderName?: string | null;
+    senderStudentId?: string | null;
+    categoryId: number;
+    locationId: number;
+    quantity: number;
+    status: "stored" | "claimed" | "disposed";
+  }
+): Promise<void> {
+  await updateStoredItem(itemId, input);
+}
+
+export async function deleteStoredItemAsAdmin(itemId: number): Promise<void> {
+  await deleteStoredItem(itemId);
 }

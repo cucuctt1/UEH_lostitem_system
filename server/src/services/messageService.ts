@@ -74,7 +74,7 @@ export async function sendMessageWorkflow(input: {
   await createNotification({
     userId: receiverId,
     type: "new_message",
-    title: "New message",
+    title: "tin nhắn mới",
     body: "You received a new message about an item.",
     referenceType: "conversation",
     referenceId: conversationId
