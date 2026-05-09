@@ -22,6 +22,8 @@ export function CreatePostPage() {
   const [contactNote, setContactNote] = useState("");
   const [status, setStatus] = useState<"searching" | "found" | "returned">("searching");
   const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [formMessage, setFormMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
 
   useEffect(() => {
     void Promise.all([listCategoriesApi(), listLocationsApi()]).then(([cats, locs]) => {
@@ -38,8 +40,9 @@ export function CreatePostPage() {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    setFormMessage(null);
     if (!categoryId || !locationId) {
-      alert("Vui lòng chọn danh mục và vị trí.");
+      setFormMessage({ type: "error", text: "Vui lòng chọn danh mục và vị trí." });
       return;
     }
 
@@ -58,14 +61,31 @@ export function CreatePostPage() {
       formData.append("images", file);
     }
 
-    await createPostApi(formData);
-    navigate("/");
+    setSubmitting(true);
+    try {
+      await createPostApi(formData);
+      setFormMessage({ type: "success", text: "Đăng bài thành công. Đang chuyển về bảng tin..." });
+      navigate("/");
+    } catch (requestError: any) {
+      setFormMessage({
+        type: "error",
+        text: requestError?.response?.data?.message ?? "Không thể tạo bài đăng. Vui lòng thử lại."
+      });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
     <AppShell title="Tạo bài đăng thất lạc/nhặt được">
       <section className="panel">
         <form className="stack-form" onSubmit={handleSubmit}>
+          {formMessage && (
+            <div className={`ui-notice ${formMessage.type === "error" ? "ui-notice-error" : "ui-notice-success"}`}>
+              <p>{formMessage.text}</p>
+            </div>
+          )}
+
           <label>
             Loại bài đăng
             <select value={type} onChange={(event) => setType(event.target.value as any)}>
@@ -158,8 +178,8 @@ export function CreatePostPage() {
             <p className="hint-text">Đã chọn {imageFiles.length} ảnh cho bài đăng này.</p>
           )}
 
-          <button className="primary-btn" type="submit">
-            Tạo bài đăng
+          <button className="primary-btn" type="submit" disabled={submitting}>
+            {submitting ? "Đang đăng..." : "Tạo bài đăng"}
           </button>
         </form>
       </section>

@@ -44,7 +44,7 @@ function relativeTime(dateValue: string): string {
   if (diffDays < 7) {
     return `${diffDays} ngày trước`;
   }
-  return new Date(dateValue).toLocaleDateString();
+  return new Date(dateValue).toLocaleDateString("vi-VN");
 }
 
 export function PostCard({ post, showSocialActions = true }: PostCardProps) {
@@ -69,6 +69,7 @@ export function PostCard({ post, showSocialActions = true }: PostCardProps) {
   const [bookmarkLoading, setBookmarkLoading] = useState(false);
   const [commentCount, setCommentCount] = useState<number | null>(null);
   const [shareNotice, setShareNotice] = useState<"idle" | "done">("idle");
+  const eventDateTimeLabel = new Date(post.eventTime).toLocaleString("vi-VN");
 
   useEffect(() => {
     let active = true;
@@ -193,16 +194,20 @@ export function PostCard({ post, showSocialActions = true }: PostCardProps) {
       <PostMediaGallery post={post} />
 
       <div className="post-meta post-meta-line">
-        <span>{new Date(post.eventTime).toLocaleString()}</span>
+        <time dateTime={post.eventTime}>{eventDateTimeLabel}</time>
       </div>
 
-      <div className="post-tags">
-        {post.tags.map((tag) => (
-          <span key={tag} className="tag-pill">
-            #{tag}
-          </span>
-        ))}
-      </div>
+      {post.tags.length > 0 ? (
+        <div className="post-tags">
+          {post.tags.map((tag) => (
+            <span key={tag} className="tag-pill">
+              #{tag}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="hint-text">Bài đăng chưa có thẻ phân loại.</p>
+      )}
 
       {showSocialActions && (
         <>
@@ -214,7 +219,7 @@ export function PostCard({ post, showSocialActions = true }: PostCardProps) {
               disabled={bookmarkLoading}
               title={isBookmarked ? "Bỏ lưu bài đăng" : "Lưu bài đăng"}
             >
-              🔖 {isBookmarked ? "Đã lưu" : "Lưu"}
+              🔖 {bookmarkLoading ? "Đang xử lý..." : isBookmarked ? "Đã lưu" : "Lưu"}
             </button>
 
             <Link className="social-btn" to={`/posts/${post.id}#comments`} title="Mở phần bình luận">

@@ -13,7 +13,7 @@ function formatDateTime(value: string): string {
   if (!Number.isFinite(timestamp)) {
     return value;
   }
-  return new Date(timestamp).toLocaleString();
+  return new Date(timestamp).toLocaleString("vi-VN");
 }
 
 export function MyPostsPage() {

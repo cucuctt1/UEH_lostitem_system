@@ -39,6 +39,17 @@ export function AppShell({ title, children }: AppShellProps) {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent): void {
+      if (event.key === "Escape") {
+        setMobileSidebarOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   function logoutAndGoLogin(): void {
     logout();
     navigate("/login");
@@ -67,31 +78,37 @@ export function AppShell({ title, children }: AppShellProps) {
     <div className={`app-frame ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
       <header className="fb-topnav">
         <div className="fb-top-left">
-          <button className="menu-icon-btn top-menu-btn" onClick={toggleSidebar}>
+          <button
+            className="menu-icon-btn top-menu-btn"
+            onClick={toggleSidebar}
+            aria-label={mobileSidebarOpen ? "Đóng menu" : "Mở menu"}
+            type="button"
+          >
             {mobileViewport ? (mobileSidebarOpen ? "✕" : "☰") : sidebarCollapsed ? "☰" : "⟨"}
           </button>
 
           <button className="brand-lockup" onClick={() => navigate("/")}
             aria-label="Về bảng tin"
+            type="button"
           >
             <img src="/icon-dark-32x32.png" alt="UEH Lost and Found" className="brand-logo" />
             <span className="brand-name">UEH Lost and Found</span>
           </button>
 
-          <button className="fb-search-pill" onClick={() => navigate("/?focusSearch=1")}>
+          <button className="fb-search-pill" onClick={() => navigate("/?focusSearch=1")} type="button">
             Tìm bài đăng theo tiêu đề, vị trí hoặc #thẻ...
           </button>
         </div>
 
         <div className="fb-top-right">
-          <button className="pill-btn top-user-btn" onClick={() => navigate("/notifications")}>
+          <button className="pill-btn top-user-btn" onClick={() => navigate("/notifications")} type="button">
             Thông báo ({unreadCount})
           </button>
           <span className="top-chip">{roleLabel}</span>
-          <button className="pill-btn top-user-btn" onClick={() => navigate("/profile")}>
+          <button className="pill-btn top-user-btn" onClick={() => navigate("/profile")} type="button">
             {user?.fullName ?? "Người dùng"}
           </button>
-          <button className="secondary-btn" onClick={logoutAndGoLogin}>
+          <button className="secondary-btn" onClick={logoutAndGoLogin} type="button">
             Đăng xuất
           </button>
         </div>
@@ -143,7 +160,7 @@ export function AppShell({ title, children }: AppShellProps) {
           </nav>
 
           <div className="sidebar-footer">
-            <button className="secondary-btn" onClick={logoutAndGoLogin}>
+            <button className="secondary-btn" onClick={logoutAndGoLogin} type="button">
               Đăng xuất
             </button>
           </div>
@@ -156,7 +173,11 @@ export function AppShell({ title, children }: AppShellProps) {
             <p className="auth-kicker">Điều hướng nhanh</p>
             <h2>{title}</h2>
           </div>
-          <button className="menu-icon-btn content-menu-btn" onClick={() => setMobileSidebarOpen(true)}>
+          <button
+            className="menu-icon-btn content-menu-btn"
+            onClick={() => setMobileSidebarOpen(true)}
+            type="button"
+          >
             Mở menu
           </button>
         </header>

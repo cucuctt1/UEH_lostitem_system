@@ -47,6 +47,8 @@ export function HomePage() {
   const [activeTab, setActiveTab] = useState<FeedTab>("for-you");
   const [recommendedPosts, setRecommendedPosts] = useState<PostItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(FEED_BATCH_SIZE);
   const [loadingMore, setLoadingMore] = useState(false);
   const feedSentinelRef = useRef<HTMLDivElement | null>(null);
@@ -59,6 +61,7 @@ export function HomePage() {
     sort?: "newest" | "relevance";
   }) {
     setLoading(true);
+    setError(null);
     try {
       const [postResults, matchResults, notificationResults, recommendationResults, bookmarks] = await Promise.all([
         searchPostsApi(filters ?? {}),
@@ -72,6 +75,9 @@ export function HomePage() {
       setNotifications(notificationResults);
       setRecommendedPosts(recommendationResults);
       setBookmarkedPostIds(bookmarks.map((bookmark) => bookmark.postId));
+      setLastUpdatedAt(new Date().toISOString());
+    } catch (requestError: any) {
+      setError(requestError?.response?.data?.message ?? "Không thể tải bảng tin. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
@@ -237,6 +243,7 @@ export function HomePage() {
             </div>
             <div className="composer-meta">
               <span className="badge">Xếp hạng bởi danh mục, vị trí, thẻ, loại bài đăng và độ mới</span>
+              <span className="badge">Cập nhật: {lastUpdatedAt ? new Date(lastUpdatedAt).toLocaleTimeString("vi-VN") : "--"}</span>
             </div>
           </section>
 
@@ -264,24 +271,32 @@ export function HomePage() {
               <button
                 className={`feed-tab ${activeTab === "for-you" ? "active" : ""}`}
                 onClick={() => setActiveTab("for-you")}
+                type="button"
+                aria-pressed={activeTab === "for-you"}
               >
                 Dành cho bạn
               </button>
               <button
                 className={`feed-tab ${activeTab === "latest" ? "active" : ""}`}
                 onClick={() => setActiveTab("latest")}
+                type="button"
+                aria-pressed={activeTab === "latest"}
               >
                 Mới nhất
               </button>
               <button
                 className={`feed-tab ${activeTab === "lost" ? "active" : ""}`}
                 onClick={() => setActiveTab("lost")}
+                type="button"
+                aria-pressed={activeTab === "lost"}
               >
                 Thất lạc
               </button>
               <button
                 className={`feed-tab ${activeTab === "found" ? "active" : ""}`}
                 onClick={() => setActiveTab("found")}
+                type="button"
+                aria-pressed={activeTab === "found"}
               >
                 Nhặt được
               </button>
@@ -289,8 +304,26 @@ export function HomePage() {
           </section>
 
           <section className="feed-list">
-            {loading && <p>Đang tải bảng tin...</p>}
-            {!loading && visiblePosts.length === 0 && <p>Không tìm thấy bài đăng phù hợp bộ lọc hiện tại.</p>}
+            {error && (
+              <div className="ui-notice ui-notice-error">
+                <p>{error}</p>
+                <button className="ghost-btn" type="button" onClick={() => void loadDashboard()}>
+                  Thử lại
+                </button>
+              </div>
+            )}
+            {loading && (
+              <div className="feed-skeleton-list" aria-hidden="true">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div key={index} className="feed-skeleton-card" />
+                ))}
+              </div>
+            )}
+            {!loading && visiblePosts.length === 0 && (
+              <div className="panel">
+                <p>Không tìm thấy bài đăng phù hợp bộ lọc hiện tại.</p>
+              </div>
+            )}
             {!loading && renderedPosts.map((post) => <PostCard key={post.id} post={post} />)}
 
             {!loading && visiblePosts.length > 0 && (

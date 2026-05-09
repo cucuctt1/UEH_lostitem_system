@@ -11,7 +11,7 @@ function formatNotificationTime(value: string): string {
     return value;
   }
 
-  return new Date(timestamp).toLocaleString();
+  return new Date(timestamp).toLocaleString("vi-VN");
 }
 
 function buildNotificationTarget(notification: NotificationItem): { to?: string; label: string } {

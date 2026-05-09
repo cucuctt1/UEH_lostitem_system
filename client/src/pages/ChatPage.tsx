@@ -60,6 +60,7 @@ export function ChatPage() {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [confirmingReturn, setConfirmingReturn] = useState(false);
   const [verifyingMatch, setVerifyingMatch] = useState(false);
+  const [chatNotice, setChatNotice] = useState<{ type: "error" | "success" | "info"; text: string } | null>(null);
   const threadRef = useRef<HTMLDivElement | null>(null);
   const hasDirectContext = Boolean(postIdParam && receiverIdParam);
   const requestedConversationId = conversationIdParam ? Number(conversationIdParam) : null;
@@ -246,7 +247,7 @@ export function ChatPage() {
     }
 
     if (!file.type.startsWith("image/")) {
-      alert("Vui lòng chọn tệp hình ảnh.");
+      setChatNotice({ type: "error", text: "Vui lòng chọn tệp hình ảnh hợp lệ." });
       return;
     }
 
@@ -284,7 +285,7 @@ export function ChatPage() {
     }
 
     if (!canSendInCurrentContext) {
-      alert("Hãy chọn cuộc trò chuyện hoặc mở chat từ trang chi tiết bài đăng.");
+      setChatNotice({ type: "info", text: "Hãy chọn cuộc trò chuyện hoặc mở chat từ trang chi tiết bài đăng." });
       return;
     }
 
@@ -322,7 +323,7 @@ export function ChatPage() {
     try {
       await confirmReturnApi(selectedConversationId, confirmableMatch.id);
       await loadMatches();
-      alert("Đã xác nhận trả lại và cập nhật trạng thái.");
+      setChatNotice({ type: "success", text: "Đã xác nhận trả lại và cập nhật trạng thái." });
     } finally {
       setConfirmingReturn(false);
     }
@@ -337,7 +338,10 @@ export function ChatPage() {
     try {
       await verifyMatchApi(suggestedMatch.id, status);
       await loadMatches();
-      alert(status === "accepted" ? "Đã xác minh match thành công." : "Đã từ chối match.");
+      setChatNotice({
+        type: "success",
+        text: status === "accepted" ? "Đã xác minh match thành công." : "Đã từ chối match."
+      });
     } finally {
       setVerifyingMatch(false);
     }
@@ -353,9 +357,9 @@ export function ChatPage() {
       await loadMessages();
       await loadMatches();
       clearSelectedAttachment();
-      alert("Đã gửi yêu cầu xác minh. Admin đã được thông báo.");
+      setChatNotice({ type: "success", text: "Đã gửi yêu cầu xác minh. Admin đã được thông báo." });
     } catch (err) {
-      alert("Không thể gửi yêu cầu xác minh.");
+      setChatNotice({ type: "error", text: "Không thể gửi yêu cầu xác minh." });
     }
   }
 
@@ -392,6 +396,20 @@ export function ChatPage() {
         </aside>
 
         <div className="panel chat-main messenger-main">
+          {chatNotice && (
+            <div
+              className={`ui-notice ${
+                chatNotice.type === "error"
+                  ? "ui-notice-error"
+                  : chatNotice.type === "success"
+                    ? "ui-notice-success"
+                    : "ui-notice-info"
+              }`}
+            >
+              <p>{chatNotice.text}</p>
+            </div>
+          )}
+
           <header className="chat-main-header">
             <div>
               <p className="auth-kicker">Đang trò chuyện với</p>

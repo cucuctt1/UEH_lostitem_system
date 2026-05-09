@@ -148,7 +148,7 @@ export function PostViewerOverlay({
                   <div key={comment.id} className="post-viewer-comment-item">
                     <strong>{comment.author.fullName}</strong>
                     <p>{comment.content}</p>
-                    <small>{new Date(comment.createdAt).toLocaleString()}</small>
+                    <small>{new Date(comment.createdAt).toLocaleString("vi-VN")}</small>
                   </div>
                 ))}
               </div>

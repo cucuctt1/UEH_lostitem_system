@@ -29,6 +29,31 @@ body {
     linear-gradient(180deg, var(--ui-bg), var(--ui-bg-deep));
 }
 
+button,
+a,
+input,
+select,
+textarea {
+  transition: box-shadow 0.18s ease, transform 0.18s ease, background-color 0.18s ease, border-color 0.18s ease;
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(0, 95, 105, 0.24);
+  outline-offset: 2px;
+}
+
 h1,
 h2,
 h3,
@@ -61,6 +86,43 @@ h4,
   border: 1px solid var(--ui-line);
   border-radius: 20px;
   box-shadow: var(--ui-shadow-soft);
+}
+
+.ui-notice {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  border-radius: 12px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  background: rgba(0, 95, 105, 0.08);
+}
+
+.ui-notice p {
+  margin: 0;
+}
+
+.ui-notice-inline {
+  margin-bottom: 8px;
+}
+
+.ui-notice-success {
+  border-color: rgba(30, 175, 104, 0.34);
+  background: rgba(30, 175, 104, 0.12);
+  color: #136645;
+}
+
+.ui-notice-error {
+  border-color: rgba(196, 58, 58, 0.34);
+  background: rgba(196, 58, 58, 0.12);
+  color: #892b2b;
+}
+
+.ui-notice-info {
+  border-color: rgba(19, 101, 125, 0.28);
+  background: rgba(19, 101, 125, 0.1);
+  color: #154f61;
 }
 
 .auth-layout {
@@ -513,6 +575,30 @@ h4,
 
 .post-contact-btn:hover {
   background: linear-gradient(120deg, var(--ui-primary-strong), var(--ui-primary));
+}
+
+.post-contact-btn:active,
+.primary-btn:active,
+.secondary-btn:active,
+.danger-btn:active,
+.ghost-btn:active,
+.social-btn:active {
+  transform: translateY(1px);
+}
+
+.feed-skeleton-list {
+  display: grid;
+  gap: 12px;
+}
+
+.feed-skeleton-card {
+  height: 300px;
+  border-radius: 16px;
+  border: 1px solid var(--ui-line);
+  background:
+    linear-gradient(100deg, rgba(255, 255, 255, 0.86) 30%, rgba(222, 236, 239, 0.85) 50%, rgba(255, 255, 255, 0.86) 70%);
+  background-size: 220% 100%;
+  animation: skeleton-slide 1.2s linear infinite;
 }
 
 .status-panel .metric {
@@ -1010,6 +1096,11 @@ textarea:focus {
     order: 2;
     padding: 20px;
   }
+
+  .ui-notice {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1048,5 +1139,14 @@ textarea:focus {
 
   .admin-main {
     padding: 12px;
+  }
+}
+
+@keyframes skeleton-slide {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
   }
 }

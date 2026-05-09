@@ -37,6 +37,12 @@ export function PostDetailPage() {
   const [commentText, setCommentText] = useState("");
   const [loadingComments, setLoadingComments] = useState(false);
   const [sendingComment, setSendingComment] = useState(false);
+  const [updatingPost, setUpdatingPost] = useState(false);
+  const [deletingPost, setDeletingPost] = useState(false);
+  const [submittingReport, setSubmittingReport] = useState(false);
+  const [markingFound, setMarkingFound] = useState(false);
+  const [requestingBypass, setRequestingBypass] = useState(false);
+  const [actionMessage, setActionMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
 
   const typeLabel = post?.type === "lost" ? "THẤT LẠC" : "NHẶT ĐƯỢC";
   const statusLabel =
@@ -89,15 +95,25 @@ export function PostDetailPage() {
     if (!post) {
       return;
     }
+    setActionMessage(null);
+    setSubmittingReport(true);
+    try {
+      await createReportApi({
+        targetPostId: post.id,
+        reason: reportReason,
+        details: reportDetails
+      });
 
-    await createReportApi({
-      targetPostId: post.id,
-      reason: reportReason,
-      details: reportDetails
-    });
-
-    setReportDetails("");
-    alert("Đã gửi báo cáo.");
+      setReportDetails("");
+      setActionMessage({ type: "success", text: "Đã gửi báo cáo thành công." });
+    } catch (requestError: any) {
+      setActionMessage({
+        type: "error",
+        text: requestError?.response?.data?.message ?? "Không thể gửi báo cáo."
+      });
+    } finally {
+      setSubmittingReport(false);
+    }
   }
 
   async function handleOwnerUpdate(event: FormEvent) {
@@ -105,6 +121,7 @@ export function PostDetailPage() {
     if (!post) {
       return;
     }
+    setActionMessage(null);
 
     const formData = new FormData();
     formData.append("title", editTitle);
@@ -116,11 +133,21 @@ export function PostDetailPage() {
       formData.append("images", file);
     }
 
-    await updatePostApi(post.id, formData);
-    const refreshed = await getPostApi(post.id);
-    setPost(refreshed);
-    setEditImageFiles([]);
-    alert("Đã cập nhật bài đăng.");
+    setUpdatingPost(true);
+    try {
+      await updatePostApi(post.id, formData);
+      const refreshed = await getPostApi(post.id);
+      setPost(refreshed);
+      setEditImageFiles([]);
+      setActionMessage({ type: "success", text: "Đã cập nhật bài đăng." });
+    } catch (requestError: any) {
+      setActionMessage({
+        type: "error",
+        text: requestError?.response?.data?.message ?? "Không thể cập nhật bài đăng."
+      });
+    } finally {
+      setUpdatingPost(false);
+    }
   }
 
   async function handleOwnerDelete() {
@@ -133,8 +160,13 @@ export function PostDetailPage() {
       return;
     }
 
-    await deletePostApi(post.id);
-    navigate("/");
+    setDeletingPost(true);
+    try {
+      await deletePostApi(post.id);
+      navigate("/");
+    } finally {
+      setDeletingPost(false);
+    }
   }
 
   async function handleSubmitComment(event: FormEvent): Promise<void> {
@@ -169,6 +201,12 @@ export function PostDetailPage() {
   return (
     <AppShell title="Chi tiết bài đăng">
       <article className="panel post-detail">
+        {actionMessage && (
+          <div className={`ui-notice ${actionMessage.type === "error" ? "ui-notice-error" : "ui-notice-success"} ui-notice-inline`}>
+            <p>{actionMessage.text}</p>
+          </div>
+        )}
+
         <div className="post-top">
           <span className={`chip chip-${post.type}`}>{typeLabel}</span>
           <span className="chip">{statusLabel}</span>
@@ -180,7 +218,7 @@ export function PostDetailPage() {
         <ul className="detail-list">
           <li>Danh mục: {post.categoryName}</li>
           <li>Vị trí: {post.locationName}</li>
-          <li>Thời gian: {new Date(post.eventTime).toLocaleString()}</li>
+          <li>Thời gian: {new Date(post.eventTime).toLocaleString("vi-VN")}</li>
           <li>Người đăng: {post.owner?.fullName}</li>
           <li>Ghi chú liên hệ: {post.contactNote || "Không có"}</li>
           <li>Chính sách số điện thoại: ẩn trên trang công khai, chỉ hiển thị trong chat riêng tư.</li>
@@ -246,45 +284,61 @@ export function PostDetailPage() {
               <p className="hint-text">Đã chọn {editImageFiles.length} ảnh để cập nhật.</p>
             )}
             <div className="button-group">
-              <button className="primary-btn" type="submit">
-                Lưu thay đổi
+              <button className="primary-btn" type="submit" disabled={updatingPost}>
+                {updatingPost ? "Đang lưu..." : "Lưu thay đổi"}
               </button>
               <button
                 className="secondary-btn"
                 type="button"
+                disabled={markingFound}
                 onClick={async () => {
                   if (!post) return;
+                  setActionMessage(null);
                   try {
+                    setMarkingFound(true);
                     await markPostFoundApi(post.id, bypassImageFile ?? undefined);
                     const refreshed = await getPostApi(post.id);
                     setPost(refreshed);
-                    alert("Đã đánh dấu bài là đã tìm thấy và gửi yêu cầu xác minh.");
+                    setActionMessage({ type: "success", text: "Đã đánh dấu bài là đã tìm thấy và gửi yêu cầu xác minh." });
                     setBypassImageFile(null);
-                  } catch (err) {
-                    alert("Không thể đánh dấu bài là đã tìm thấy.");
+                  } catch (requestError: any) {
+                    setActionMessage({
+                      type: "error",
+                      text: requestError?.response?.data?.message ?? "Không thể đánh dấu bài là đã tìm thấy."
+                    });
+                  } finally {
+                    setMarkingFound(false);
                   }
                 }}
               >
-                Đã tìm thấy (gửi xác minh)
+                {markingFound ? "Đang gửi xác minh..." : "Đã tìm thấy (gửi xác minh)"}
               </button>
-              <button className="danger-btn" type="button" onClick={handleOwnerDelete}>
-                Xóa bài đăng
+              <button className="danger-btn" type="button" onClick={handleOwnerDelete} disabled={deletingPost}>
+                {deletingPost ? "Đang xóa..." : "Xóa bài đăng"}
               </button>
               <button
                 className="secondary-btn"
                 type="button"
+                disabled={requestingBypass}
                 onClick={async () => {
                   if (!post) return;
+                  setActionMessage(null);
                   try {
+                    setRequestingBypass(true);
                     await requestPostBypassApi(post.id, bypassImageFile ?? undefined);
-                    alert("Đã gửi yêu cầu xác minh thủ công. Admin sẽ kiểm tra.");
+                    setActionMessage({ type: "success", text: "Đã gửi yêu cầu xác minh thủ công. Admin sẽ kiểm tra." });
                     setBypassImageFile(null);
-                  } catch (err) {
-                    alert("Gửi yêu cầu thất bại.");
+                  } catch (requestError: any) {
+                    setActionMessage({
+                      type: "error",
+                      text: requestError?.response?.data?.message ?? "Gửi yêu cầu xác minh thất bại."
+                    });
+                  } finally {
+                    setRequestingBypass(false);
                   }
                 }}
               >
-                Gửi yêu cầu xác minh (bỏ qua tự động)
+                {requestingBypass ? "Đang gửi yêu cầu..." : "Gửi yêu cầu xác minh (bỏ qua tự động)"}
               </button>
             </div>
           </form>
@@ -303,7 +357,7 @@ export function PostDetailPage() {
               <div className="post-viewer-comment-item" key={comment.id}>
                 <strong>{comment.author.fullName}</strong>
                 <p>{comment.content}</p>
-                <small>{new Date(comment.createdAt).toLocaleString()}</small>
+                <small>{new Date(comment.createdAt).toLocaleString("vi-VN")}</small>
               </div>
             ))}
           </div>
@@ -338,8 +392,8 @@ export function PostDetailPage() {
             required
             placeholder="Mô tả vấn đề"
           />
-          <button className="secondary-btn" type="submit">
-            Gửi báo cáo
+          <button className="secondary-btn" type="submit" disabled={submittingReport}>
+            {submittingReport ? "Đang gửi..." : "Gửi báo cáo"}
           </button>
         </form>
       </section>

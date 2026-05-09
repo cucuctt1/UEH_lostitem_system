@@ -20,6 +20,8 @@ export function ProfilePage() {
   const [history, setHistory] = useState<MyHistoryItem>({ posts: [], returns: [] });
   const [publicProfile, setPublicProfile] = useState<PublicProfileItem | null>(null);
   const [loadingPublicProfile, setLoadingPublicProfile] = useState(false);
+  const [updatingProfile, setUpdatingProfile] = useState(false);
+  const [profileMessage, setProfileMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
 
   useEffect(() => {
     if (!isPublicProfile) {
@@ -58,9 +60,20 @@ export function ProfilePage() {
       return;
     }
 
-    await apiClient.put("/users/me", { fullName, bio });
-    await initialize();
-    alert("Đã cập nhật hồ sơ.");
+    setProfileMessage(null);
+    setUpdatingProfile(true);
+    try {
+      await apiClient.put("/users/me", { fullName, bio });
+      await initialize();
+      setProfileMessage({ type: "success", text: "Đã cập nhật hồ sơ thành công." });
+    } catch (requestError: any) {
+      setProfileMessage({
+        type: "error",
+        text: requestError?.response?.data?.message ?? "Không thể cập nhật hồ sơ. Vui lòng thử lại."
+      });
+    } finally {
+      setUpdatingProfile(false);
+    }
   }
 
   if (isPublicProfile) {
@@ -74,7 +87,7 @@ export function ProfilePage() {
               <h3>{publicProfile.fullName}</h3>
               <p>{publicProfile.bio || "Người dùng này chưa có phần giới thiệu."}</p>
               <p>
-                Tham gia từ: {publicProfile.createdAt ? new Date(publicProfile.createdAt).toLocaleString() : "-"}
+                Tham gia từ: {publicProfile.createdAt ? new Date(publicProfile.createdAt).toLocaleString("vi-VN") : "-"}
               </p>
               <button className="secondary-btn" type="button" onClick={() => navigate(-1)}>
                 Quay lại
@@ -91,6 +104,12 @@ export function ProfilePage() {
       <section className="panel">
         <h3>Thông tin cá nhân</h3>
         <form className="stack-form" onSubmit={handleUpdate}>
+          {profileMessage && (
+            <div className={`ui-notice ${profileMessage.type === "error" ? "ui-notice-error" : "ui-notice-success"}`}>
+              <p>{profileMessage.text}</p>
+            </div>
+          )}
+
           <label>
             Họ và tên
             <input value={fullName} onChange={(event) => setFullName(event.target.value)} required />
@@ -107,8 +126,8 @@ export function ProfilePage() {
           <button className="ghost-btn" type="button" onClick={() => navigate("/doi-mat-khau")}>
             Đổi mật khẩu
           </button>
-          <button className="primary-btn" type="submit">
-            Lưu hồ sơ
+          <button className="primary-btn" type="submit" disabled={updatingProfile}>
+            {updatingProfile ? "Đang lưu..." : "Lưu hồ sơ"}
           </button>
         </form>
       </section>
