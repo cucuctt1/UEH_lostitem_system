@@ -60,6 +60,19 @@ export async function createPostApi(formData: FormData): Promise<{ postId: numbe
   return data.data;
 }
 
+export async function markPostFoundApi(postId: number, imageFile?: File): Promise<{ requestId?: number }> {
+  const formData = new FormData();
+  if (imageFile) {
+    formData.append("image", imageFile);
+  }
+
+  const { data } = await apiClient.post<ApiEnvelope<{ requestId?: number }>>(`/verification/posts/${postId}/mark-found`, formData, {
+    headers: { "Content-Type": "multipart/form-data" }
+  });
+  clearPostRelatedCaches(postId);
+  return data.data;
+}
+
 export async function updatePostApi(postId: number, formData: FormData): Promise<void> {
   await apiClient.put(`/posts/${postId}`, formData, {
     headers: { "Content-Type": "multipart/form-data" }

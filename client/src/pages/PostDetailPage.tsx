@@ -9,7 +9,8 @@ import {
   getPostApi,
   listPostCommentsApi,
   updatePostApi,
-  requestPostBypassApi
+  requestPostBypassApi,
+  markPostFoundApi
 } from "../services/api/postApi";
 import { createReportApi } from "../services/api/miscApi";
 import { PostCommentItem, PostItem } from "../types";
@@ -247,6 +248,24 @@ export function PostDetailPage() {
             <div className="button-group">
               <button className="primary-btn" type="submit">
                 Lưu thay đổi
+              </button>
+              <button
+                className="secondary-btn"
+                type="button"
+                onClick={async () => {
+                  if (!post) return;
+                  try {
+                    await markPostFoundApi(post.id, bypassImageFile ?? undefined);
+                    const refreshed = await getPostApi(post.id);
+                    setPost(refreshed);
+                    alert("Đã đánh dấu bài là đã tìm thấy và gửi yêu cầu xác minh.");
+                    setBypassImageFile(null);
+                  } catch (err) {
+                    alert("Không thể đánh dấu bài là đã tìm thấy.");
+                  }
+                }}
+              >
+                Đã tìm thấy (gửi xác minh)
               </button>
               <button className="danger-btn" type="button" onClick={handleOwnerDelete}>
                 Xóa bài đăng

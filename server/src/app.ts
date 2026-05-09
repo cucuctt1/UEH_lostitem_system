@@ -18,6 +18,7 @@ import reportRoutes from "./routes/reportRoutes";
 import analyticsRoutes from "./routes/analyticsRoutes";
 import lookupRoutes from "./routes/lookupRoutes";
 import bookmarkRoutes from "./routes/bookmarkRoutes";
+import verificationRoutes from "./routes/verificationRoutes";
 
 export const app = express();
 
@@ -86,6 +87,7 @@ app.use("/admin", adminRoutes);
 app.use("/analytics", analyticsRoutes);
 app.use("/lookup", lookupRoutes);
 app.use("/bookmarks", bookmarkRoutes);
+app.use("/verification", verificationRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
