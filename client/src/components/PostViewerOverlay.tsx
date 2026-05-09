@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { createPostCommentApi, listPostCommentsApi } from "../services/api/postApi";
 import { PostCommentItem, PostItem } from "../types";
 
@@ -59,6 +60,18 @@ export function PostViewerOverlay({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open, onClose, totalImages]);
 
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
+
   const activeImage = useMemo(() => images[activeIndex], [images, activeIndex]);
 
   async function handleSubmitComment(event: FormEvent) {
@@ -83,7 +96,7 @@ export function PostViewerOverlay({
     return null;
   }
 
-  return (
+  const overlayElement = (
     <div className="post-viewer-backdrop" onClick={onClose}>
       <div className="post-viewer-shell" onClick={(event) => event.stopPropagation()}>
         <div className="post-viewer-media">
@@ -170,4 +183,6 @@ export function PostViewerOverlay({
       </div>
     </div>
   );
+
+  return createPortal(overlayElement, document.body);
 }
