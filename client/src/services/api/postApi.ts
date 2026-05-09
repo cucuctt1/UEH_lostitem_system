@@ -116,3 +116,16 @@ export async function createPostCommentApi(postId: number, content: string): Pro
   await apiClient.post(`/posts/${postId}/comments`, { content });
   clearCachedValue(buildCacheKey("post:comments", { postId }));
 }
+
+export async function requestPostBypassApi(postId: number, imageFile?: File): Promise<void> {
+  const formData = new FormData();
+  if (imageFile) {
+    formData.append("image", imageFile);
+  }
+
+  await apiClient.post(`/posts/${postId}/request-bypass`, formData, {
+    headers: { "Content-Type": "multipart/form-data" }
+  });
+
+  clearPostRelatedCaches(postId);
+}

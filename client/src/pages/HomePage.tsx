@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
 import { PostCard } from "../components/PostCard";
 import { StatusPanel } from "../components/StatusPanel";
@@ -33,6 +33,7 @@ function parseHybridSearchQuery(query: string): { keyword?: string; tag?: string
 
 export function HomePage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const posts = useAppStore((state) => state.posts);
   const setPosts = useAppStore((state) => state.setPosts);
   const matches = useAppStore((state) => state.matches);
@@ -50,6 +51,7 @@ export function HomePage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const feedSentinelRef = useRef<HTMLDivElement | null>(null);
   const loadingMoreTimerRef = useRef<number | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   async function loadDashboard(filters?: {
     keyword?: string;
@@ -78,6 +80,19 @@ export function HomePage() {
   useEffect(() => {
     void loadDashboard();
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get("focusSearch") === "1") {
+      window.setTimeout(() => {
+        searchInputRef.current?.focus();
+        searchInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 0);
+
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete("focusSearch");
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     return () => {
@@ -228,6 +243,7 @@ export function HomePage() {
           <section className="panel">
             <form className="filter-grid feed-filter-grid" onSubmit={handleSearch}>
               <input
+                ref={searchInputRef}
                 placeholder="Tìm kiếm + #thẻ (vd: ví #thẻ-sv)"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}

@@ -1,10 +1,21 @@
 import { Request, Response } from "express";
 import { asyncHandler, sendSuccess } from "../utils/http";
-import { changeMyPassword, getMyHistory, getMyProfile, updateMyProfile } from "../services/userService";
+import {
+  changeMyPassword,
+  getMyHistory,
+  getMyProfile,
+  getPublicProfile,
+  updateMyProfile
+} from "../services/userService";
 
 export const meController = asyncHandler(async (request: Request, response: Response) => {
   const result = await getMyProfile(request.user!.id);
   sendSuccess(response, "Fetched profile", result);
+});
+
+export const publicProfileController = asyncHandler(async (request: Request, response: Response) => {
+  const result = await getPublicProfile(Number(request.params.userId));
+  sendSuccess(response, "Fetched public profile", result);
 });
 
 export const updateMeController = asyncHandler(async (request: Request, response: Response) => {

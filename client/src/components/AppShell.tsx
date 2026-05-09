@@ -56,6 +56,7 @@ export function AppShell({ title, children }: AppShellProps) {
   const roleLabel = user?.role === "admin" ? "Quản trị viên" : "Người dùng";
   const menuEntries = [
     { to: "/", label: "Bảng tin", icon: "⌕" },
+    { to: "/notifications", label: "Thông báo", icon: "◌" },
     { to: "/posts/new", label: "Tạo bài đăng", icon: "✚" },
     { to: "/my-posts", label: "Bài đăng của tôi", icon: "▣" },
     { to: "/profile", label: "Hồ sơ", icon: "◉" },
@@ -77,13 +78,15 @@ export function AppShell({ title, children }: AppShellProps) {
             <span className="brand-name">UEH Lost and Found</span>
           </button>
 
-          <button className="fb-search-pill" onClick={() => navigate("/")}>
+          <button className="fb-search-pill" onClick={() => navigate("/?focusSearch=1")}>
             Tìm bài đăng theo tiêu đề, vị trí hoặc #thẻ...
           </button>
         </div>
 
         <div className="fb-top-right">
-          <span className="top-chip">Thông báo: {unreadCount}</span>
+          <button className="pill-btn top-user-btn" onClick={() => navigate("/notifications")}>
+            Thông báo ({unreadCount})
+          </button>
           <span className="top-chip">{roleLabel}</span>
           <button className="pill-btn top-user-btn" onClick={() => navigate("/profile")}>
             {user?.fullName ?? "Người dùng"}

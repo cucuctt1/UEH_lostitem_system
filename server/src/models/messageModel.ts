@@ -80,6 +80,7 @@ export async function createMessage(
 export async function listConversationsForUser(userId: number): Promise<RowDataPacket[]> {
   const [rows] = await dbPool.query<RowDataPacket[]>(
     `SELECT c.*, p.title AS post_title,
+            p.user_id AS post_owner_id,
             u1.full_name AS user_one_name, u2.full_name AS user_two_name
      FROM conversations c
      JOIN posts p ON p.id = c.post_id

@@ -11,6 +11,8 @@ import {
 import { toUploadUrl } from "../config/multer";
 import { createPostComment, listPostComments } from "../models/postCommentModel";
 import { getPostById } from "../models/postModel";
+import { createNotification } from "../models/notificationModel";
+import { dbPool } from "../config/db";
 
 function getUploadedImageUrls(request: Request): string[] {
   const files = request.files as
@@ -128,4 +130,34 @@ export const createPostCommentController = asyncHandler(async (request: Request,
 
   const commentId = await createPostComment(postId, request.user!.id, request.body.content);
   sendSuccess(response, "Comment posted", { commentId }, 201);
+});
+
+export const requestBypassController = asyncHandler(async (request: Request, response: Response) => {
+  const postId = Number(request.params.id);
+  const post = await getPostById(postId);
+  if (!post) {
+    throw new AppError(404, "Post not found");
+  }
+
+  if (post.user_id !== request.user!.id) {
+    throw new AppError(403, "Only the post owner can request a verification bypass");
+  }
+
+  const file = request.file as Express.Multer.File | undefined;
+  const imageUrl = file ? toUploadUrl(file.filename) : null;
+
+  // Notify all admins about the manual verification request
+  const [adminRows] = await dbPool.query<any[]>("SELECT id FROM users WHERE role = 'admin'");
+  for (const admin of adminRows) {
+    await createNotification({
+      userId: admin.id,
+      type: "matching_result",
+      title: "Yêu cầu xác minh thủ công",
+      body: `Người đăng đã gửi yêu cầu xác minh thủ công cho bài #${postId}.`,
+      referenceType: "post",
+      referenceId: postId
+    });
+  }
+
+  sendSuccess(response, "Verification bypass requested");
 });

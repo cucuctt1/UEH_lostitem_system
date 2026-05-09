@@ -8,7 +8,8 @@ import {
   deletePostApi,
   getPostApi,
   listPostCommentsApi,
-  updatePostApi
+  updatePostApi,
+  requestPostBypassApi
 } from "../services/api/postApi";
 import { createReportApi } from "../services/api/miscApi";
 import { PostCommentItem, PostItem } from "../types";
@@ -30,6 +31,7 @@ export function PostDetailPage() {
   const [editTags, setEditTags] = useState("");
   const [editContactNote, setEditContactNote] = useState("");
   const [editImageFiles, setEditImageFiles] = useState<File[]>([]);
+  const [bypassImageFile, setBypassImageFile] = useState<File | null>(null);
   const [comments, setComments] = useState<PostCommentItem[]>([]);
   const [commentText, setCommentText] = useState("");
   const [loadingComments, setLoadingComments] = useState(false);
@@ -228,6 +230,17 @@ export function PostDetailPage() {
                 onChange={(event) => setEditImageFiles(Array.from(event.target.files ?? []).slice(0, 4))}
               />
             </label>
+            <label>
+              Ảnh xác minh (tùy chọn)
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(event) => setBypassImageFile(event.target.files?.[0] ?? null)}
+              />
+            </label>
+            {bypassImageFile && (
+              <div className="hint-text">Đã chọn ảnh xác minh: {bypassImageFile.name}</div>
+            )}
             {editImageFiles.length > 0 && (
               <p className="hint-text">Đã chọn {editImageFiles.length} ảnh để cập nhật.</p>
             )}
@@ -237,6 +250,22 @@ export function PostDetailPage() {
               </button>
               <button className="danger-btn" type="button" onClick={handleOwnerDelete}>
                 Xóa bài đăng
+              </button>
+              <button
+                className="secondary-btn"
+                type="button"
+                onClick={async () => {
+                  if (!post) return;
+                  try {
+                    await requestPostBypassApi(post.id, bypassImageFile ?? undefined);
+                    alert("Đã gửi yêu cầu xác minh thủ công. Admin sẽ kiểm tra.");
+                    setBypassImageFile(null);
+                  } catch (err) {
+                    alert("Gửi yêu cầu thất bại.");
+                  }
+                }}
+              >
+                Gửi yêu cầu xác minh (bỏ qua tự động)
               </button>
             </div>
           </form>

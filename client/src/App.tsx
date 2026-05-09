@@ -12,6 +12,7 @@ import { MyPostsPage } from "./pages/MyPostsPage";
 import { AdminDashboardPage } from "./pages/AdminDashboardPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { ChangePasswordPage } from "./pages/ChangePasswordPage";
+import { NotificationsPage } from "./pages/NotificationsPage";
 
 export function App() {
   const initialize = useAuthStore((state) => state.initialize);
@@ -69,6 +70,15 @@ export function App() {
         element={
           <ProtectedRoute>
             <ProfilePage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/notifications"
+        element={
+          <ProtectedRoute>
+            <NotificationsPage />
           </ProtectedRoute>
         }
       />

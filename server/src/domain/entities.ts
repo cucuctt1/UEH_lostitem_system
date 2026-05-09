@@ -252,6 +252,16 @@ export class User {
     };
   }
 
+  toPublicView() {
+    return {
+      id: this.id,
+      fullName: this.fullName,
+      avatarUrl: this.avatarUrl,
+      bio: this.bio,
+      createdAt: this.createdAt
+    };
+  }
+
   toAdminView() {
     return {
       id: this.id,
@@ -373,6 +383,7 @@ export class Conversation {
   constructor(
     public readonly id: number,
     public readonly postId: number,
+    public readonly postOwnerId: number | null,
     public readonly userOneId: number,
     public readonly userTwoId: number,
     public readonly postTitle?: string,
@@ -386,6 +397,7 @@ export class Conversation {
     return new Conversation(
       row.id,
       row.post_id,
+      row.post_owner_id ?? null,
       row.user_one_id,
       row.user_two_id,
       row.post_title,
@@ -400,6 +412,7 @@ export class Conversation {
     return {
       id: this.id,
       post_id: this.postId,
+      post_owner_id: this.postOwnerId,
       user_one_id: this.userOneId,
       user_two_id: this.userTwoId,
       post_title: this.postTitle,

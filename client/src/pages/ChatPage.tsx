@@ -1,5 +1,5 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
 import {
   confirmReturnApi,
@@ -7,7 +7,8 @@ import {
   listMessagesApi,
   sendMessageApi
 } from "../services/api/messageApi";
-import { listMatchesApi } from "../services/api/miscApi";
+import { createConversationApi, requestVerificationApi } from "../services/api/messageApi";
+import { listMatchesApi, verifyMatchApi } from "../services/api/miscApi";
 import { Conversation, MatchItem, Message } from "../types";
 import { usePolling } from "../hooks/usePolling";
 import { useAuthStore } from "../store/authStore";
@@ -42,9 +43,11 @@ function formatRelativeChatTime(value?: string | null): string {
 }
 
 export function ChatPage() {
+  const navigate = useNavigate();
   const [params] = useSearchParams();
   const postIdParam = params.get("postId");
   const receiverIdParam = params.get("receiverId");
+  const conversationIdParam = params.get("conversationId");
   const currentUserId = useAuthStore((state) => state.user?.id);
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -56,8 +59,10 @@ export function ChatPage() {
   const [selectedImagePreviewUrl, setSelectedImagePreviewUrl] = useState<string | null>(null);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [confirmingReturn, setConfirmingReturn] = useState(false);
+  const [verifyingMatch, setVerifyingMatch] = useState(false);
   const threadRef = useRef<HTMLDivElement | null>(null);
   const hasDirectContext = Boolean(postIdParam && receiverIdParam);
+  const requestedConversationId = conversationIdParam ? Number(conversationIdParam) : null;
   const canSendInCurrentContext = Boolean(selectedConversationId || hasDirectContext);
 
   const selectedConversation = useMemo(
@@ -65,9 +70,9 @@ export function ChatPage() {
     [conversations, selectedConversationId]
   );
 
-  const activeConversationName = useMemo(() => {
+  const activeConversationPartner = useMemo(() => {
     if (!selectedConversation) {
-      return "Cuộc trò chuyện mới";
+      return "Chọn một cuộc trò chuyện";
     }
 
     if (!currentUserId) {
@@ -96,6 +101,16 @@ export function ChatPage() {
     [conversationMatches]
   );
 
+  const suggestedMatch = useMemo(
+    () => conversationMatches.find((match) => match.status === "suggested") ?? null,
+    [conversationMatches]
+  );
+
+  const rejectedMatch = useMemo(
+    () => conversationMatches.find((match) => match.status === "rejected") ?? null,
+    [conversationMatches]
+  );
+
   const confirmableMatch = useMemo(() => {
     const accepted = conversationMatches.find((match) => match.status === "accepted");
     if (accepted) {
@@ -114,23 +129,48 @@ export function ChatPage() {
       return `Đã xác nhận trả lại với Match #${returnedMatch.id}.`;
     }
 
+    if (rejectedMatch) {
+      return `Match #${rejectedMatch.id} đã bị từ chối. Hãy chờ gợi ý khác.`;
+    }
+
     if (confirmableMatch) {
       return `Sẵn sàng xác nhận bằng Match #${confirmableMatch.id}.`;
     }
 
     return "Không tìm thấy match đang hoạt động cho cuộc trò chuyện này.";
-  }, [selectedConversationId, returnedMatch, confirmableMatch]);
+  }, [selectedConversationId, returnedMatch, rejectedMatch, confirmableMatch]);
+
+  const canPosterVerifySuggestedMatch = Boolean(
+    selectedConversation &&
+      selectedConversation.post_owner_id === currentUserId &&
+      suggestedMatch &&
+      !returnedMatch
+  );
 
   async function loadConversations() {
     const rows = await listConversationsApi();
     setConversations(rows);
     setSelectedConversationId((current) => {
+      if (requestedConversationId && rows.some((conversation) => conversation.id === requestedConversationId)) {
+        return requestedConversationId;
+      }
+
       if (current && rows.some((conversation) => conversation.id === current)) {
         return current;
       }
       return rows[0]?.id ?? null;
     });
   }
+
+  useEffect(() => {
+    if (!requestedConversationId) {
+      return;
+    }
+
+    if (conversations.some((conversation) => conversation.id === requestedConversationId)) {
+      setSelectedConversationId(requestedConversationId);
+    }
+  }, [requestedConversationId, conversations]);
 
   async function loadMatches() {
     const rows = await listMatchesApi();
@@ -147,6 +187,21 @@ export function ChatPage() {
 
   useEffect(() => {
     void loadConversations();
+    // If opened from a post detail with postId & receiverId, ensure a conversation exists and select it
+    if (hasDirectContext && postIdParam && receiverIdParam) {
+      const postId = Number(postIdParam);
+      const receiverId = Number(receiverIdParam);
+      void (async () => {
+        try {
+          const { conversationId } = await createConversationApi(postId, receiverId);
+          setSelectedConversationId(conversationId);
+          await loadConversations();
+          await loadMessages();
+        } catch (e) {
+          // ignore
+        }
+      })();
+    }
     void loadMatches();
   }, []);
 
@@ -273,6 +328,37 @@ export function ChatPage() {
     }
   }
 
+  async function handleManualVerify(status: "accepted" | "rejected") {
+    if (!canPosterVerifySuggestedMatch || !suggestedMatch || verifyingMatch) {
+      return;
+    }
+
+    setVerifyingMatch(true);
+    try {
+      await verifyMatchApi(suggestedMatch.id, status);
+      await loadMatches();
+      alert(status === "accepted" ? "Đã xác minh match thành công." : "Đã từ chối match.");
+    } finally {
+      setVerifyingMatch(false);
+    }
+  }
+
+  async function handleRequestVerification() {
+    if (!selectedConversationId || !selectedConversation || selectedConversation.post_owner_id !== currentUserId) {
+      return;
+    }
+
+    try {
+      await requestVerificationApi(selectedConversationId, selectedImageFile ?? undefined);
+      await loadMessages();
+      await loadMatches();
+      clearSelectedAttachment();
+      alert("Đã gửi yêu cầu xác minh. Admin đã được thông báo.");
+    } catch (err) {
+      alert("Không thể gửi yêu cầu xác minh.");
+    }
+  }
+
   return (
     <AppShell title="Tin nhắn">
       <section className="chat-layout messenger-layout">
@@ -297,7 +383,7 @@ export function ChatPage() {
                   onClick={() => setSelectedConversationId(conversation.id)}
                 >
                   <strong>{conversationName ?? "Cuộc trò chuyện"}</strong>
-                  <small>{conversation.post_title}</small>
+                  <small>Về bài: {conversation.post_title}</small>
                   <small>{formatRelativeChatTime(conversation.last_message_at ?? conversation.created_at)}</small>
                 </button>
               );
@@ -308,8 +394,14 @@ export function ChatPage() {
         <div className="panel chat-main messenger-main">
           <header className="chat-main-header">
             <div>
-              <h3 className="chat-partner-name">{activeConversationName}</h3>
+              <p className="auth-kicker">Đang trò chuyện với</p>
+              <h3 className="chat-partner-name">{activeConversationPartner}</h3>
               <p className="hint-text">{selectedConversation?.post_title ?? "Chọn cuộc trò chuyện để bắt đầu nhắn tin."}</p>
+              {selectedConversation && (
+                <button className="ghost-btn" type="button" onClick={() => navigate(`/posts/${selectedConversation.post_id}`)}>
+                  Mở bài đăng liên quan
+                </button>
+              )}
             </div>
 
             <div className="chat-header-actions">
@@ -317,6 +409,28 @@ export function ChatPage() {
 
               <div className="chat-return-box">
                 <small>Quy trình xác nhận trả lại</small>
+
+                {canPosterVerifySuggestedMatch && (
+                  <div className="button-group">
+                    <button
+                      className="secondary-btn"
+                      type="button"
+                      onClick={() => void handleManualVerify("accepted")}
+                      disabled={verifyingMatch}
+                    >
+                      {verifyingMatch ? "Đang xử lý..." : "Xác minh khớp"}
+                    </button>
+                    <button
+                      className="ghost-btn"
+                      type="button"
+                      onClick={() => void handleManualVerify("rejected")}
+                      disabled={verifyingMatch}
+                    >
+                      Từ chối khớp
+                    </button>
+                  </div>
+                )}
+
                 <button
                   className="secondary-btn chat-return-btn"
                   type="button"
@@ -404,6 +518,12 @@ export function ChatPage() {
                 Đính kèm ảnh
                 <input type="file" accept="image/*" onChange={handleAttachmentChange} />
               </label>
+
+                {selectedConversation && selectedConversation.post_owner_id === currentUserId && (
+                  <button className="ghost-btn" type="button" onClick={() => void handleRequestVerification()}>
+                  Yêu cầu xác minh
+                </button>
+              )}
 
               <button
                 className="primary-btn"

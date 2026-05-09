@@ -1,8 +1,13 @@
 import { ApiEnvelope } from "../../types";
 import { apiClient } from "./client";
+import { clearCachedPrefix } from "../../utils/clientCache";
 
 export async function approvePostApi(postId: number, approved: boolean): Promise<void> {
   await apiClient.post("/admin/approve-post", { postId, approved });
+  // Clear related caches so admin UI and feed update without a hard refresh
+  clearCachedPrefix("posts:");
+  clearCachedPrefix("matches:");
+  clearCachedPrefix("notifications:");
 }
 
 export async function lockUserApi(userId: number, locked: boolean): Promise<void> {

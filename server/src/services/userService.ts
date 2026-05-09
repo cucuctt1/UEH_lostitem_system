@@ -18,6 +18,15 @@ export async function getMyProfile(userId: number) {
   return User.fromDb(user).toProfileView();
 }
 
+export async function getPublicProfile(userId: number) {
+  const user = await findUserById(userId);
+  if (!user) {
+    throw new AppError(404, "User not found");
+  }
+
+  return User.fromDb(user).toPublicView();
+}
+
 export async function updateMyProfile(
   userId: number,
   payload: { fullName?: string; bio?: string; avatarUrl?: string }

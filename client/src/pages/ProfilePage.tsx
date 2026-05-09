@@ -1,38 +1,93 @@
-import { FormEvent, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
 import { apiClient } from "../services/api/client";
 import { getMyHistoryApi } from "../services/api/miscApi";
+import { getPublicProfileApi } from "../services/api/userApi";
 import { useAuthStore } from "../store/authStore";
-import { MyHistoryItem } from "../types";
+import { MyHistoryItem, PublicProfileItem } from "../types";
 
 export function ProfilePage() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const user = useAuthStore((state) => state.user);
   const initialize = useAuthStore((state) => state.initialize);
+  const viewedUserId = params.get("userId") ? Number(params.get("userId")) : null;
+  const isPublicProfile = Boolean(viewedUserId && viewedUserId !== user?.id);
 
   const [fullName, setFullName] = useState(user?.fullName ?? "");
   const [bio, setBio] = useState(user?.bio ?? "");
   const [history, setHistory] = useState<MyHistoryItem>({ posts: [], returns: [] });
+  const [publicProfile, setPublicProfile] = useState<PublicProfileItem | null>(null);
+  const [loadingPublicProfile, setLoadingPublicProfile] = useState(false);
 
   useEffect(() => {
-    setFullName(user?.fullName ?? "");
-    setBio(user?.bio ?? "");
-  }, [user]);
+    if (!isPublicProfile) {
+      setFullName(user?.fullName ?? "");
+      setBio(user?.bio ?? "");
+    }
+  }, [user, isPublicProfile]);
 
   useEffect(() => {
+    if (isPublicProfile) {
+      if (!viewedUserId) {
+        return;
+      }
+
+      setLoadingPublicProfile(true);
+      void getPublicProfileApi(viewedUserId)
+        .then(setPublicProfile)
+        .finally(() => setLoadingPublicProfile(false));
+      return;
+    }
+
     void getMyHistoryApi().then(setHistory);
-  }, []);
+  }, [isPublicProfile, viewedUserId]);
+
+  const pageTitle = useMemo(() => {
+    if (isPublicProfile && publicProfile) {
+      return publicProfile.fullName;
+    }
+
+    return "Hồ sơ của tôi";
+  }, [isPublicProfile, publicProfile]);
 
   async function handleUpdate(event: FormEvent) {
     event.preventDefault();
+    if (isPublicProfile) {
+      return;
+    }
+
     await apiClient.put("/users/me", { fullName, bio });
     await initialize();
     alert("Đã cập nhật hồ sơ.");
   }
 
+  if (isPublicProfile) {
+    return (
+      <AppShell title={pageTitle}>
+        <section className="panel">
+          {loadingPublicProfile && <p>Đang tải hồ sơ công khai...</p>}
+          {!loadingPublicProfile && publicProfile && (
+            <div className="stack-form">
+              <p className="auth-kicker">Hồ sơ công khai</p>
+              <h3>{publicProfile.fullName}</h3>
+              <p>{publicProfile.bio || "Người dùng này chưa có phần giới thiệu."}</p>
+              <p>
+                Tham gia từ: {publicProfile.createdAt ? new Date(publicProfile.createdAt).toLocaleString() : "-"}
+              </p>
+              <button className="secondary-btn" type="button" onClick={() => navigate(-1)}>
+                Quay lại
+              </button>
+            </div>
+          )}
+        </section>
+      </AppShell>
+    );
+  }
+
   return (
-    <AppShell title="Hồ sơ của tôi">
+    <AppShell title={pageTitle}>
       <section className="panel">
         <h3>Thông tin cá nhân</h3>
         <form className="stack-form" onSubmit={handleUpdate}>
@@ -67,6 +122,9 @@ export function ProfilePage() {
               <small>
                 {item.type} / {item.status} / duyệt: {item.moderation_status}
               </small>
+              <button className="ghost-btn" type="button" onClick={() => navigate(`/posts/${item.id}`)}>
+                Mở bài đăng
+              </button>
             </div>
           ))}
         </div>
@@ -77,6 +135,12 @@ export function ProfilePage() {
             <div className="row-card" key={item.match_id}>
               <p>Kết nối #{item.match_id}</p>
               <small>Điểm: {item.score} | Trả lại lúc: {item.returned_at || "-"}</small>
+              <button className="ghost-btn" type="button" onClick={() => navigate(`/posts/${item.lost_post_id}`)}>
+                Mở bài thất lạc
+              </button>
+              <button className="ghost-btn" type="button" onClick={() => navigate(`/posts/${item.found_post_id}`)}>
+                Mở bài nhặt được
+              </button>
             </div>
           ))}
         </div>

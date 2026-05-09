@@ -11,6 +11,14 @@ export interface AuthUser {
   phone?: string | null;
 }
 
+export interface PublicProfileItem {
+  id: number;
+  fullName: string;
+  avatarUrl?: string | null;
+  bio?: string | null;
+  createdAt?: string | null;
+}
+
 export interface ApiEnvelope<T> {
   success: boolean;
   message: string;
@@ -65,6 +73,7 @@ export interface MatchItem {
 export interface Conversation {
   id: number;
   post_id: number;
+  post_owner_id?: number | null;
   post_title: string;
   user_one_id: number;
   user_two_id: number;
@@ -91,6 +100,9 @@ export interface NotificationItem {
   body: string;
   is_read: number;
   created_at: string;
+  user_id?: number;
+  reference_type?: string | null;
+  reference_id?: number | null;
 }
 
 export interface Category {

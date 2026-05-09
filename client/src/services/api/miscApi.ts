@@ -28,6 +28,12 @@ export async function listMatchesApi(): Promise<MatchItem[]> {
   return data.data;
 }
 
+export async function verifyMatchApi(matchId: number, status: "accepted" | "rejected"): Promise<void> {
+  await apiClient.post(`/matches/${matchId}/verify`, { status });
+  clearCachedPrefix("matches:");
+  clearCachedPrefix("notifications:");
+}
+
 export async function listNotificationsApi(): Promise<NotificationItem[]> {
   const cacheKey = buildCacheKey("notifications:list");
   const cached = getCachedValue<NotificationItem[]>(cacheKey);

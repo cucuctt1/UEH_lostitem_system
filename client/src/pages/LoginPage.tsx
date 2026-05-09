@@ -29,14 +29,14 @@ export function LoginPage() {
           <p className="auth-kicker">Cộng đồng UEH</p>
         </div>
         <h2>Hệ thống Thất lạc & Nhặt được UEH</h2>
-        <p className="auth-hint">
+        {/* <p className="auth-hint">
           Giao diện mới tối ưu cho tìm kiếm theo #thẻ, vị trí và ngữ cảnh trả lại.
         </p>
         <ul className="auth-feature-list">
           <li>Tạo tài khoản bởi quản trị viên</li>
           <li>Bắt buộc email @st.ueh.edu.vn</li>
           <li>Bảo mật với quy trình đổi mật khẩu lần đầu</li>
-        </ul>
+        </ul> */}
       </section>
 
       <form className="auth-card auth-main-card" onSubmit={handleSubmit}>
@@ -46,9 +46,9 @@ export function LoginPage() {
         </div>
         <p className="auth-kicker">Cộng đồng UEH</p>
         <h1>Đăng nhập hệ thống</h1>
-        <p className="auth-hint">
+        {/* <p className="auth-hint">
           Tài khoản mới chỉ được tạo bởi quản trị viên. Email bắt buộc kết thúc bằng @st.ueh.edu.vn.
-        </p>
+        </p> */}
 
         <label>
           Email UEH

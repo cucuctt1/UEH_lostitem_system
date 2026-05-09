@@ -10,6 +10,9 @@ import { createNotification } from "../models/notificationModel";
 import { getMatchById, setMatchStatus } from "../models/matchModel";
 import { setPostStatus } from "../models/postModel";
 import { Conversation, Message } from "../domain/entities";
+import { getPostById } from "../models/postModel";
+import { dbPool } from "../config/db";
+import { RowDataPacket } from "mysql2";
 
 export async function listConversationMessages(conversationId: number, requesterId: number) {
   const conversation = await findConversationById(conversationId);
@@ -86,6 +89,55 @@ export async function sendMessageWorkflow(input: {
 export async function listMyConversations(userId: number) {
   const rows = await listConversationsForUser(userId);
   return rows.map((row) => Conversation.fromDb(row).toApiView());
+}
+
+export async function createOrFindConversation(postId: number, senderId: number, receiverId: number) {
+  const conversationId = await findOrCreateConversation(postId, senderId, receiverId);
+  return conversationId;
+}
+
+export async function requestVerificationWorkflow(conversationId: number, requesterId: number, imageUrl?: string) {
+  const conversation = await findConversationById(conversationId);
+  if (!conversation) {
+    throw new AppError(404, "Conversation not found");
+  }
+  if (conversation.user_one_id !== requesterId && conversation.user_two_id !== requesterId) {
+    throw new AppError(403, "You are not in this conversation");
+  }
+
+  const post = await getPostById(conversation.post_id);
+  if (!post) {
+    throw new AppError(404, "Post not found");
+  }
+
+  // Compose message with post preview so the other party can click through the request
+  const text = `Yêu cầu xác minh cho bài: ${post.title}`;
+  const finalImageUrl = imageUrl ?? post.image_url ?? null;
+
+  await createMessage(conversationId, requesterId, text, finalImageUrl);
+
+  const otherOwnerId = conversation.user_one_id === requesterId ? conversation.user_two_id : conversation.user_one_id;
+  await createNotification({
+    userId: otherOwnerId,
+    type: "matching_result",
+    title: "Yêu cầu xác minh",
+    body: `Người dùng đã gửi yêu cầu xác minh cho bài #${conversation.post_id}`,
+    referenceType: "conversation",
+    referenceId: conversationId
+  });
+
+  // Notify all admins
+  const [adminRows] = await dbPool.query<RowDataPacket[]>("SELECT id FROM users WHERE role = 'admin'");
+  for (const admin of adminRows) {
+    await createNotification({
+      userId: admin.id,
+      type: "matching_result",
+      title: "Yêu cầu xác minh mới",
+      body: `Bài #${conversation.post_id} đang chờ xác minh`,
+      referenceType: "post",
+      referenceId: conversation.post_id
+    });
+  }
 }
 
 export async function confirmReturnWorkflow(conversationId: number, userId: number, matchId: number): Promise<void> {

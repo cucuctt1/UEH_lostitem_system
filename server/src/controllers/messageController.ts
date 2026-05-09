@@ -6,6 +6,7 @@ import {
   listMyConversations,
   sendMessageWorkflow
 } from "../services/messageService";
+import { createOrFindConversation, requestVerificationWorkflow } from "../services/messageService";
 import { toUploadUrl } from "../config/multer";
 
 export const listConversationsController = asyncHandler(async (request: Request, response: Response) => {
@@ -38,4 +39,18 @@ export const confirmReturnController = asyncHandler(async (request: Request, res
   const conversationId = Number(request.params.conversationId);
   await confirmReturnWorkflow(conversationId, request.user!.id, request.body.matchId);
   sendSuccess(response, "Return confirmed");
+});
+
+export const createConversationController = asyncHandler(async (request: Request, response: Response) => {
+  const postId = Number(request.body.postId);
+  const receiverId = Number(request.body.receiverId);
+  const conversationId = await createOrFindConversation(postId, request.user!.id, receiverId);
+  sendSuccess(response, "Conversation ready", { conversationId }, 201);
+});
+
+export const requestVerificationController = asyncHandler(async (request: Request, response: Response) => {
+  const conversationId = Number(request.params.conversationId);
+  const uploadedImageUrl = request.file ? toUploadUrl(request.file.filename) : undefined;
+  await requestVerificationWorkflow(conversationId, request.user!.id, uploadedImageUrl);
+  sendSuccess(response, "Verification requested");
 });

@@ -11,6 +11,13 @@ export interface MatchRecord extends RowDataPacket {
   created_at: string;
 }
 
+export interface MatchWithOwnersRecord extends MatchRecord {
+  lost_owner_id: number;
+  found_owner_id: number;
+  lost_title: string;
+  found_title: string;
+}
+
 export async function upsertMatch(
   lostPostId: number,
   foundPostId: number,
@@ -48,6 +55,21 @@ export async function setMatchStatus(
 
 export async function getMatchById(matchId: number): Promise<MatchRecord | null> {
   const [rows] = await dbPool.query<MatchRecord[]>("SELECT * FROM matches WHERE id = ? LIMIT 1", [matchId]);
+  return rows[0] ?? null;
+}
+
+export async function getMatchWithOwnersById(matchId: number): Promise<MatchWithOwnersRecord | null> {
+  const [rows] = await dbPool.query<MatchWithOwnersRecord[]>(
+    `SELECT m.*, lp.user_id AS lost_owner_id, fp.user_id AS found_owner_id,
+            lp.title AS lost_title, fp.title AS found_title
+     FROM matches m
+     JOIN posts lp ON lp.id = m.lost_post_id
+     JOIN posts fp ON fp.id = m.found_post_id
+     WHERE m.id = ?
+     LIMIT 1`,
+    [matchId]
+  );
+
   return rows[0] ?? null;
 }
 

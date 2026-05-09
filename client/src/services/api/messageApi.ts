@@ -65,3 +65,24 @@ export async function sendMessageApi(payload: SendMessagePayload): Promise<{ mes
 export async function confirmReturnApi(conversationId: number, matchId: number): Promise<void> {
   await apiClient.post(`/messages/${conversationId}/confirm-return`, { matchId });
 }
+
+export async function createConversationApi(postId: number, receiverId: number): Promise<{ conversationId: number }> {
+  const { data } = await apiClient.post<ApiEnvelope<{ conversationId: number }>>("/messages/conversations", {
+    postId,
+    receiverId
+  });
+  return data.data;
+}
+
+export async function requestVerificationApi(conversationId: number, imageFile?: File): Promise<void> {
+  const formData = new FormData();
+  if (imageFile) {
+    formData.append("image", imageFile);
+  }
+
+  await apiClient.post(`/messages/${conversationId}/request-verification`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data"
+    }
+  });
+}

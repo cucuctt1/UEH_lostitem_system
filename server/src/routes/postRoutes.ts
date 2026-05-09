@@ -7,7 +7,8 @@ import {
   listPostCommentsController,
   listPostsController,
   recommendedPostsController,
-  updatePostController
+  updatePostController,
+  requestBypassController
 } from "../controllers/postController";
 import { requireAuth } from "../middleware/auth";
 import { validateBody, validateQuery } from "../middleware/validate";
@@ -47,5 +48,6 @@ router.put(
   updatePostController
 );
 router.delete("/:id", requireAuth, deletePostController);
+router.post("/:id/request-bypass", requireAuth, upload.single("image"), requestBypassController);
 
 export default router;
