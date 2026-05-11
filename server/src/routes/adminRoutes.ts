@@ -1,12 +1,16 @@
 import { Router } from "express";
 import {
   adminCreateItemController,
+  adminCreateTagController,
   adminCreateUserController,
   adminDeleteItemController,
+  adminDeleteTagController,
   adminDeletePostController,
   adminListItemsController,
   adminListReportsController,
+  adminListTagsController,
   adminResolveReportController,
+  adminUpdateTagController,
   adminUpdateItemController,
   adminUpdateItemStatusController,
   approvePostController,
@@ -16,7 +20,13 @@ import {
 import { requireAuth } from "../middleware/auth";
 import { requireRole } from "../middleware/role";
 import { validateBody } from "../middleware/validate";
-import { approvePostSchema, createUserByAdminSchema, lockUserSchema } from "../validators/adminValidators";
+import {
+  approvePostSchema,
+  createTagByAdminSchema,
+  createUserByAdminSchema,
+  lockUserSchema,
+  updateTagByAdminSchema
+} from "../validators/adminValidators";
 import {
   createStoredItemSchema,
   updateStoredItemSchema,
@@ -39,5 +49,9 @@ router.post("/items", validateBody(createStoredItemSchema), adminCreateItemContr
 router.put("/items/:id", validateBody(updateStoredItemSchema), adminUpdateItemController);
 router.patch("/items/:id/status", validateBody(updateStoredItemStatusSchema), adminUpdateItemStatusController);
 router.delete("/items/:id", adminDeleteItemController);
+router.get("/tags", adminListTagsController);
+router.post("/tags", validateBody(createTagByAdminSchema), adminCreateTagController);
+router.put("/tags/:id", validateBody(updateTagByAdminSchema), adminUpdateTagController);
+router.delete("/tags/:id", adminDeleteTagController);
 
 export default router;

@@ -26,3 +26,13 @@ export const createUserByAdminSchema = z.object({
   email: studentEmailSchema,
   temporaryPassword: z.string().min(8).max(72)
 });
+
+export const createTagByAdminSchema = z.object({
+  name: z.string().min(1).max(41),
+  isPrebuilt: z.boolean().optional()
+});
+
+export const updateTagByAdminSchema = z.object({
+  name: z.string().min(1).max(41),
+  isPrebuilt: z.boolean().optional()
+});

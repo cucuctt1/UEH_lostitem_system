@@ -7,22 +7,27 @@ import { Category, Location, PostItem } from "../types";
 import {
   AdminReportRow,
   AdminStoredItemRow,
+  AdminTagRow,
   AdminUserRow,
   AnalyticsSummaryRow,
   approvePostApi,
   createItemApi,
+  createTagApi,
   createUserByAdminApi,
   deleteItemApi,
+  deleteTagApi,
   getAnalyticsApi,
   getItemsApi,
   getReportsApi,
+  getTagsApi,
   getUsersApi,
   lockUserApi,
   resolveReportApi,
+  updateTagApi,
   updateItemApi
 } from "../services/api/adminApi";
 
-type AdminSection = "dashboard" | "locations" | "disputes";
+type AdminSection = "dashboard" | "locations" | "disputes" | "storage" | "tags" | "users";
 
 type WeekPoint = {
   key: string;
@@ -42,7 +47,10 @@ type LocationInsight = {
 const SECTION_LABELS: Record<AdminSection, string> = {
   dashboard: "Bảng điều khiển",
   locations: "Quản lý địa điểm",
-  disputes: "Xử lý tranh chấp"
+  disputes: "Xử lý tranh chấp",
+  storage: "Quản lý kho",
+  tags: "Quản lý tag",
+  users: "Quản lý người dùng"
 };
 
 const WEEKDAY_LABELS = ["CN", "Th 2", "Th 3", "Th 4", "Th 5", "Th 6", "Th 7"];
@@ -215,6 +223,7 @@ export function AdminDashboardPage() {
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [reports, setReports] = useState<AdminReportRow[]>([]);
   const [items, setItems] = useState<AdminStoredItemRow[]>([]);
+  const [tags, setTags] = useState<AdminTagRow[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsSummaryRow | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -235,6 +244,14 @@ export function AdminDashboardPage() {
   const [deletingStorageId, setDeletingStorageId] = useState<number | null>(null);
   const [storageKeyword, setStorageKeyword] = useState("");
   const [storageMessage, setStorageMessage] = useState<string | null>(null);
+  const [tagKeyword, setTagKeyword] = useState("");
+  const [tagName, setTagName] = useState("");
+  const [tagPrebuilt, setTagPrebuilt] = useState(true);
+  const [editingTagId, setEditingTagId] = useState<number | null>(null);
+  const [submittingTag, setSubmittingTag] = useState(false);
+  const [deletingTagId, setDeletingTagId] = useState<number | null>(null);
+  const [tagMessage, setTagMessage] = useState<string | null>(null);
+  const [userKeyword, setUserKeyword] = useState("");
 
   const [accountFullName, setAccountFullName] = useState("");
   const [accountEmail, setAccountEmail] = useState("");
@@ -246,20 +263,22 @@ export function AdminDashboardPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const [postRows, userRows, reportRows, itemRows, analyticRows, locationRows, categoryRows] = await Promise.all([
+      const [postRows, userRows, reportRows, itemRows, analyticRows, locationRows, categoryRows, tagRows] = await Promise.all([
         listPostsApi(),
         getUsersApi(),
         getReportsApi(),
         getItemsApi(),
         getAnalyticsApi(),
         listLocationsApi(),
-        listCategoriesApi()
+        listCategoriesApi(),
+        getTagsApi()
       ]);
 
       setAllPosts(postRows);
       setUsers(userRows);
       setReports(reportRows);
       setItems(itemRows);
+      setTags(tagRows);
       setAnalytics(analyticRows);
       setLocations(locationRows);
       setCategories(categoryRows);
@@ -393,6 +412,65 @@ export function AdminDashboardPage() {
     }
   }
 
+  function resetTagForm(): void {
+    setEditingTagId(null);
+    setTagName("");
+    setTagPrebuilt(true);
+  }
+
+  function startEditTag(tag: AdminTagRow): void {
+    setEditingTagId(tag.id);
+    setTagName(`#${tag.name}`);
+    setTagPrebuilt(tag.is_prebuilt === 1);
+    setTagMessage(null);
+  }
+
+  async function handleSubmitTag(event: FormEvent): Promise<void> {
+    event.preventDefault();
+    setTagMessage(null);
+    const cleanedName = tagName.trim().replace(/^#/, "");
+    if (!cleanedName) {
+      setTagMessage("Vui lòng nhập tag.");
+      return;
+    }
+
+    setSubmittingTag(true);
+    try {
+      const payload = { name: cleanedName, isPrebuilt: tagPrebuilt };
+      if (editingTagId) {
+        await updateTagApi(editingTagId, payload);
+        setTagMessage("Đã cập nhật tag.");
+      } else {
+        await createTagApi(payload);
+        setTagMessage("Đã thêm tag.");
+      }
+      resetTagForm();
+      await loadAdminData();
+    } catch (requestError) {
+      setTagMessage(extractErrorMessage(requestError, "Không thể lưu tag."));
+    } finally {
+      setSubmittingTag(false);
+    }
+  }
+
+  async function handleDeleteTag(tag: AdminTagRow): Promise<void> {
+    const confirmed = window.confirm(`Bạn có chắc muốn xóa tag #${tag.name}?`);
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingTagId(tag.id);
+    try {
+      await deleteTagApi(tag.id);
+      if (editingTagId === tag.id) {
+        resetTagForm();
+      }
+      await loadAdminData();
+    } finally {
+      setDeletingTagId(null);
+    }
+  }
+
   async function handleCreateAccount(event: FormEvent): Promise<void> {
     event.preventDefault();
     setAccountMessage(null);
@@ -463,6 +541,26 @@ export function AdminDashboardPage() {
     });
   }, [items, storageKeyword]);
 
+  const filteredTags = useMemo(() => {
+    const keyword = tagKeyword.trim().toLowerCase();
+    if (!keyword) {
+      return tags;
+    }
+    return tags.filter((tag) => tag.name.toLowerCase().includes(keyword));
+  }, [tags, tagKeyword]);
+
+  const filteredUsers = useMemo(() => {
+    const keyword = userKeyword.trim().toLowerCase();
+    if (!keyword) {
+      return users;
+    }
+
+    return users.filter((entry) => {
+      const source = `${entry.full_name} ${entry.email} ${formatRole(entry.role)}`.toLowerCase();
+      return source.includes(keyword);
+    });
+  }, [users, userKeyword]);
+
   const weekTrend = useMemo(() => buildWeekTrend(allPosts), [allPosts]);
   const reportLine = weekTrend.map((entry) => entry.reported);
   const resolvedLine = weekTrend.map((entry) => entry.resolved);
@@ -522,6 +620,9 @@ export function AdminDashboardPage() {
                 {section === "dashboard" && <small>{pendingPosts.length} chờ duyệt</small>}
                 {section === "locations" && <small>{locationInsights.length} điểm</small>}
                 {section === "disputes" && <small>{openDisputes} đang mở</small>}
+                {section === "storage" && <small>{items.length} vật phẩm</small>}
+                {section === "tags" && <small>{tags.length} tag</small>}
+                {section === "users" && <small>{users.length} người dùng</small>}
               </button>
             ))}
           </div>
@@ -637,105 +738,53 @@ export function AdminDashboardPage() {
                 </article>
               </div>
 
-              <section className="admin-secondary-grid">
-                <article className="panel">
-                  <h3>Bài đăng chờ kiểm duyệt</h3>
-                  {pendingPosts.length === 0 && <p className="hint-text">Hiện không có bài đăng đang chờ duyệt.</p>}
-                  {pendingPosts.map((post) => (
-                    <div key={post.id} className="row-actions">
-                      <div>
-                        <strong>{post.title}</strong>
-                        <small>
-                          {formatPostType(post.type)} | {formatPostStatus(post.status)}
-                        </small>
-                      </div>
-                      <div className="button-group">
-                        <button
-                          className="primary-btn"
-                          disabled={moderatingPostId === post.id}
-                          onClick={() => void moderatePost(post.id, true)}
-                        >
-                          {moderatingPostId === post.id ? "Đang xử lý..." : "Duyệt"}
-                        </button>
-                        <button
-                          className="danger-btn"
-                          disabled={moderatingPostId === post.id}
-                          onClick={() => void moderatePost(post.id, false)}
-                        >
-                          {moderatingPostId === post.id ? "Đang xử lý..." : "Từ chối"}
-                        </button>
-                      </div>
+              <section className="panel">
+                <h3>Bài đăng chờ kiểm duyệt</h3>
+                {pendingPosts.length === 0 && <p className="hint-text">Hiện không có bài đăng đang chờ duyệt.</p>}
+                {pendingPosts.map((post) => (
+                  <div key={post.id} className="row-actions">
+                    <div>
+                      <strong>{post.title}</strong>
+                      <small>
+                        {formatPostType(post.type)} | {formatPostStatus(post.status)}
+                      </small>
                     </div>
-                  ))}
-                </article>
-
-                <article className="panel">
-                  <h3>Quản lý người dùng</h3>
-                  {users.map((entry) => (
-                    <div key={entry.id} className="row-actions">
-                      <div>
-                        <strong>{entry.full_name}</strong>
-                        <small>
-                          {entry.email} | {formatRole(entry.role)}
-                        </small>
-                        {entry.must_change_password === 1 && (
-                          <p className="hint-text">Người dùng cần đổi mật khẩu ở lần đăng nhập đầu tiên.</p>
-                        )}
-                      </div>
+                    <div className="button-group">
                       <button
-                        className="secondary-btn"
-                        onClick={() => void toggleUserLock(entry.id, entry.is_locked === 0)}
-                        disabled={entry.role === "admin" || lockingUserId === entry.id}
+                        className="primary-btn"
+                        disabled={moderatingPostId === post.id}
+                        onClick={() => void moderatePost(post.id, true)}
                       >
-                        {lockingUserId === entry.id ? "Đang xử lý..." : entry.is_locked === 1 ? "Mở khóa" : "Khóa"}
+                        {moderatingPostId === post.id ? "Đang xử lý..." : "Duyệt"}
+                      </button>
+                      <button
+                        className="danger-btn"
+                        disabled={moderatingPostId === post.id}
+                        onClick={() => void moderatePost(post.id, false)}
+                      >
+                        {moderatingPostId === post.id ? "Đang xử lý..." : "Từ chối"}
                       </button>
                     </div>
-                  ))}
-                </article>
+                  </div>
+                ))}
               </section>
+            </div>
+          )}
+
+          {activeSection === "storage" && (
+            <div className="admin-view">
+              <header className="admin-view-head">
+                <div>
+                  <h2>Quản lý kho</h2>
+                  <p className="hint-text">Quản lý vật phẩm đã nhận, cập nhật trạng thái trao trả và thông tin người gửi.</p>
+                </div>
+              </header>
 
               <section className="panel split-panel">
                 <div>
-                  <h3>Tạo tài khoản người dùng</h3>
-                  <form className="stack-form" onSubmit={(event) => void handleCreateAccount(event)}>
-                    <input
-                      placeholder="Họ và tên"
-                      value={accountFullName}
-                      onChange={(event) => setAccountFullName(event.target.value)}
-                      required
-                    />
-                    <input
-                      type="email"
-                      placeholder="Email sinh viên (user@st.ueh.edu.vn)"
-                      value={accountEmail}
-                      onChange={(event) => setAccountEmail(event.target.value)}
-                      required
-                    />
-                    <input
-                      type="password"
-                      placeholder="Mật khẩu tạm thời"
-                      value={temporaryPassword}
-                      onChange={(event) => setTemporaryPassword(event.target.value)}
-                      minLength={8}
-                      required
-                    />
-                    {accountMessage && <p className="hint-text">{accountMessage}</p>}
-                    <button className="primary-btn" type="submit" disabled={creatingAccount}>
-                      {creatingAccount ? "Đang tạo..." : "Tạo tài khoản"}
-                    </button>
-                  </form>
-                </div>
-
-                <div>
-                  <h3>Storage Manager</h3>
-                  <p className="hint-text">Quản lý vật phẩm đã nhận, cập nhật trạng thái trao trả và thông tin người gửi.</p>
+                  <h3>Thêm hoặc chỉnh sửa vật phẩm</h3>
 
                   <form className="stack-form" onSubmit={(event) => void handleSubmitStorage(event)}>
-                    <input
-                      value={storageKeyword}
-                      onChange={(event) => setStorageKeyword(event.target.value)}
-                      placeholder="Tìm vật phẩm theo tên, người gửi, MSSV..."
-                    />
                     <input
                       value={storageName}
                       onChange={(event) => setStorageName(event.target.value)}
@@ -762,6 +811,7 @@ export function AdminDashboardPage() {
                       onChange={(event) => setStorageCategoryId(Number(event.target.value))}
                       required
                     >
+                      <option value="">-- Chọn danh mục --</option>
                       {categories.map((category) => (
                         <option key={category.id} value={category.id}>
                           {category.name}
@@ -773,6 +823,7 @@ export function AdminDashboardPage() {
                       onChange={(event) => setStorageLocationId(Number(event.target.value))}
                       required
                     >
+                      <option value="">-- Chọn địa điểm --</option>
                       {locations.map((location) => (
                         <option key={location.id} value={location.id}>
                           {location.name}
@@ -797,6 +848,15 @@ export function AdminDashboardPage() {
                       )}
                     </div>
                   </form>
+                </div>
+
+                <div>
+                  <h3>Danh sách vật phẩm</h3>
+                  <input
+                    value={storageKeyword}
+                    onChange={(event) => setStorageKeyword(event.target.value)}
+                    placeholder="Tìm vật phẩm theo tên, người gửi, MSSV..."
+                  />
 
                   <div className="admin-table-panel storage-table-wrap">
                     <table className="table-basic admin-locations-table">
@@ -840,6 +900,210 @@ export function AdminDashboardPage() {
                                   {deletingStorageId === item.id ? "Đang xóa..." : "Xóa"}
                                 </button>
                               </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+            </div>
+          )}
+
+          {activeSection === "tags" && (
+            <div className="admin-view">
+              <header className="admin-view-head">
+                <div>
+                  <h2>Quản lý tag</h2>
+                  <p className="hint-text">Tạo, chỉnh sửa và quản lý các tag được sử dụng cho các bài đăng.</p>
+                </div>
+              </header>
+
+              <section className="panel split-panel">
+                <div>
+                  <h3>Thêm hoặc chỉnh sửa tag</h3>
+
+                  <form className="stack-form" onSubmit={(event) => void handleSubmitTag(event)}>
+                    <input
+                      value={tagName}
+                      onChange={(event) => setTagName(event.target.value)}
+                      placeholder="Tên tag (ví dụ: #điện thoại)"
+                      required
+                    />
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={tagPrebuilt}
+                        onChange={(event) => setTagPrebuilt(event.target.checked)}
+                      />
+                      <span>Tag được xây dựng sẵn</span>
+                    </label>
+
+                    {tagMessage && <p className="hint-text">{tagMessage}</p>}
+
+                    <div className="button-group">
+                      <button className="primary-btn" type="submit" disabled={submittingTag}>
+                        {submittingTag ? "Đang lưu..." : editingTagId ? "Lưu cập nhật" : "Thêm tag"}
+                      </button>
+                      {editingTagId && (
+                        <button className="ghost-btn" type="button" onClick={resetTagForm}>
+                          Hủy chỉnh sửa
+                        </button>
+                      )}
+                    </div>
+                  </form>
+                </div>
+
+                <div>
+                  <h3>Danh sách tag</h3>
+                  <input
+                    value={tagKeyword}
+                    onChange={(event) => setTagKeyword(event.target.value)}
+                    placeholder="Tìm tag..."
+                  />
+
+                  <div className="admin-table-panel">
+                    <table className="table-basic">
+                      <thead>
+                        <tr>
+                          <th>Tag</th>
+                          <th>Loại</th>
+                          <th>Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredTags.length === 0 && (
+                          <tr>
+                            <td colSpan={3} className="hint-text">
+                              Không có tag phù hợp.
+                            </td>
+                          </tr>
+                        )}
+                        {filteredTags.map((tag) => (
+                          <tr key={tag.id}>
+                            <td>
+                              <strong>#{tag.name}</strong>
+                            </td>
+                            <td>{tag.is_prebuilt === 1 ? "Xây dựng sẵn" : "Tùy chỉnh"}</td>
+                            <td>
+                              <div className="admin-inline-actions">
+                                <button className="ghost-btn" type="button" onClick={() => startEditTag(tag)}>
+                                  Sửa
+                                </button>
+                                <button
+                                  className="danger-btn"
+                                  type="button"
+                                  onClick={() => void handleDeleteTag(tag)}
+                                  disabled={deletingTagId === tag.id}
+                                >
+                                  {deletingTagId === tag.id ? "Đang xóa..." : "Xóa"}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+            </div>
+          )}
+
+          {activeSection === "users" && (
+            <div className="admin-view">
+              <header className="admin-view-head">
+                <div>
+                  <h2>Quản lý người dùng</h2>
+                  <p className="hint-text">Quản lý tài khoản người dùng, khóa/mở khóa tài khoản và tạo tài khoản mới.</p>
+                </div>
+              </header>
+
+              <section className="panel split-panel">
+                <div>
+                  <h3>Tạo tài khoản mới</h3>
+                  <form className="stack-form" onSubmit={(event) => void handleCreateAccount(event)}>
+                    <input
+                      placeholder="Họ và tên"
+                      value={accountFullName}
+                      onChange={(event) => setAccountFullName(event.target.value)}
+                      required
+                    />
+                    <input
+                      type="email"
+                      placeholder="Email sinh viên (user@st.ueh.edu.vn)"
+                      value={accountEmail}
+                      onChange={(event) => setAccountEmail(event.target.value)}
+                      required
+                    />
+                    <input
+                      type="password"
+                      placeholder="Mật khẩu tạm thời"
+                      value={temporaryPassword}
+                      onChange={(event) => setTemporaryPassword(event.target.value)}
+                      minLength={8}
+                      required
+                    />
+                    {accountMessage && <p className="hint-text">{accountMessage}</p>}
+                    <button className="primary-btn" type="submit" disabled={creatingAccount}>
+                      {creatingAccount ? "Đang tạo..." : "Tạo tài khoản"}
+                    </button>
+                  </form>
+                </div>
+
+                <div>
+                  <h3>Danh sách người dùng</h3>
+                  <input
+                    value={userKeyword}
+                    onChange={(event) => setUserKeyword(event.target.value)}
+                    placeholder="Tìm theo tên, email hoặc vai trò..."
+                  />
+
+                  <div className="admin-table-panel">
+                    <table className="table-basic">
+                      <thead>
+                        <tr>
+                          <th>Tên</th>
+                          <th>Email</th>
+                          <th>Vai trò</th>
+                          <th>Trạng thái</th>
+                          <th>Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredUsers.length === 0 && (
+                          <tr>
+                            <td colSpan={5} className="hint-text">
+                              Không có người dùng phù hợp.
+                            </td>
+                          </tr>
+                        )}
+                        {filteredUsers.map((entry) => (
+                          <tr key={entry.id}>
+                            <td>
+                              <strong>{entry.full_name}</strong>
+                            </td>
+                            <td>{entry.email}</td>
+                            <td>{formatRole(entry.role)}</td>
+                            <td>
+                              {entry.is_locked === 1 ? (
+                                <span className="admin-pill lost">Bị khóa</span>
+                              ) : (
+                                <span className="admin-pill found">Hoạt động</span>
+                              )}
+                              {entry.must_change_password === 1 && (
+                                <p className="hint-text">Cần đổi mật khẩu</p>
+                              )}
+                            </td>
+                            <td>
+                              <button
+                                className="secondary-btn"
+                                onClick={() => void toggleUserLock(entry.id, entry.is_locked === 0)}
+                                disabled={entry.role === "admin" || lockingUserId === entry.id}
+                              >
+                                {lockingUserId === entry.id ? "Đang xử lý..." : entry.is_locked === 1 ? "Mở khóa" : "Khóa"}
+                              </button>
                             </td>
                           </tr>
                         ))}

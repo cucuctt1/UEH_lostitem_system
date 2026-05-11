@@ -4,13 +4,17 @@ import {
   approvePost,
   createUserAsAdmin,
   createStoredItemAsAdmin,
+  createTagAsAdmin,
   deleteStoredItemAsAdmin,
+  deleteTagAsAdmin,
   deletePostAsAdmin,
   getReports,
   getStoredItems,
+  getTagsAsAdmin,
   getUsers,
   lockUser,
   resolveReportAsAdmin,
+  updateTagAsAdmin,
   updateStoredItemAsAdmin,
   updateStoredItemStatusAsAdmin
 } from "../services/adminService";
@@ -99,4 +103,30 @@ export const adminUpdateItemController = asyncHandler(async (request: Request, r
 export const adminDeleteItemController = asyncHandler(async (request: Request, response: Response) => {
   await deleteStoredItemAsAdmin(Number(request.params.id));
   sendSuccess(response, "Stored item deleted");
+});
+
+export const adminListTagsController = asyncHandler(async (request: Request, response: Response) => {
+  const tags = await getTagsAsAdmin(request.query.keyword as string | undefined);
+  sendSuccess(response, "Fetched tags", tags);
+});
+
+export const adminCreateTagController = asyncHandler(async (request: Request, response: Response) => {
+  await createTagAsAdmin({
+    name: request.body.name,
+    isPrebuilt: Boolean(request.body.isPrebuilt)
+  });
+  sendSuccess(response, "Tag created", null, 201);
+});
+
+export const adminUpdateTagController = asyncHandler(async (request: Request, response: Response) => {
+  await updateTagAsAdmin(Number(request.params.id), {
+    name: request.body.name,
+    isPrebuilt: Boolean(request.body.isPrebuilt)
+  });
+  sendSuccess(response, "Tag updated");
+});
+
+export const adminDeleteTagController = asyncHandler(async (request: Request, response: Response) => {
+  await deleteTagAsAdmin(Number(request.params.id));
+  sendSuccess(response, "Tag deleted");
 });

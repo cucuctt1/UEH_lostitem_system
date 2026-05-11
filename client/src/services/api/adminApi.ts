@@ -57,6 +57,15 @@ export interface AnalyticsSummaryRow {
   lostByHour: Array<{ hour_of_day: number; total: number }>;
 }
 
+export interface AdminTagRow {
+  id: number;
+  name: string;
+  use_count: number;
+  is_prebuilt: 0 | 1;
+  is_frequent: 0 | 1;
+  last_used_at: string | null;
+}
+
 export async function approvePostApi(postId: number, approved: boolean): Promise<void> {
   await apiClient.post("/admin/approve-post", { postId, approved });
   // Clear related caches so admin UI and feed update without a hard refresh
@@ -139,6 +148,34 @@ export async function updateItemApi(
 
 export async function deleteItemApi(itemId: number): Promise<void> {
   await apiClient.delete(`/admin/items/${itemId}`);
+}
+
+export async function getTagsApi(keyword?: string): Promise<AdminTagRow[]> {
+  const { data } = await apiClient.get<ApiEnvelope<AdminTagRow[]>>("/admin/tags", {
+    params: { keyword }
+  });
+  return data.data;
+}
+
+export async function createTagApi(payload: {
+  name: string;
+  isPrebuilt?: boolean;
+}): Promise<void> {
+  await apiClient.post("/admin/tags", payload);
+}
+
+export async function updateTagApi(
+  tagId: number,
+  payload: {
+    name: string;
+    isPrebuilt?: boolean;
+  }
+): Promise<void> {
+  await apiClient.put(`/admin/tags/${tagId}`, payload);
+}
+
+export async function deleteTagApi(tagId: number): Promise<void> {
+  await apiClient.delete(`/admin/tags/${tagId}`);
 }
 
 export async function getAnalyticsApi(): Promise<AnalyticsSummaryRow> {

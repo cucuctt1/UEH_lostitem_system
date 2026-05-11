@@ -111,3 +111,58 @@ export async function listTagUsageRows(tagNames: string[]): Promise<TagRow[]> {
 
   return rows;
 }
+
+export async function listTagsForAdmin(keyword?: string, limit = 200): Promise<TagRow[]> {
+  const safeLimit = Math.max(1, Math.min(500, Math.floor(limit)));
+  if (keyword) {
+    const likeKeyword = `%${keyword.toLowerCase()}%`;
+    const [rows] = await dbPool.query<TagRow[]>(
+      `SELECT *
+       FROM tags
+       WHERE name LIKE ?
+       ORDER BY use_count DESC, is_prebuilt DESC, name ASC
+       LIMIT ?`,
+      [likeKeyword, safeLimit]
+    );
+    return rows;
+  }
+
+  const [rows] = await dbPool.query<TagRow[]>(
+    `SELECT *
+     FROM tags
+     ORDER BY use_count DESC, is_prebuilt DESC, name ASC
+     LIMIT ?`,
+    [safeLimit]
+  );
+  return rows;
+}
+
+export async function createTagForAdmin(input: {
+  name: string;
+  isPrebuilt: boolean;
+}): Promise<void> {
+  await dbPool.query(
+    `INSERT INTO tags (name, use_count, is_prebuilt, is_frequent, last_used_at)
+     VALUES (?, 0, ?, 0, NULL)`,
+    [input.name, input.isPrebuilt ? 1 : 0]
+  );
+}
+
+export async function updateTagForAdmin(
+  tagId: number,
+  input: {
+    name: string;
+    isPrebuilt: boolean;
+  }
+): Promise<void> {
+  await dbPool.query(
+    `UPDATE tags
+     SET name = ?, is_prebuilt = ?
+     WHERE id = ?`,
+    [input.name, input.isPrebuilt ? 1 : 0, tagId]
+  );
+}
+
+export async function deleteTagForAdmin(tagId: number): Promise<void> {
+  await dbPool.query("DELETE FROM tags WHERE id = ?", [tagId]);
+}

@@ -26,6 +26,10 @@ export function errorHandler(error: unknown, _request: Request, response: Respon
     return;
   }
 
+  // Log unexpected errors for debugging
+  // eslint-disable-next-line no-console
+  console.error("Unhandled error:", error);
+
   response.status(500).json({
     success: false,
     message: "Internal server error"

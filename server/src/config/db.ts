@@ -57,6 +57,31 @@ export async function setupDatabaseIfEnabled(): Promise<void> {
       }
     }
 
+    // Ensure items table has expanded sender fields and larger description
+    try {
+      await bootstrapPool.query("ALTER TABLE items MODIFY description VARCHAR(1500) NULL");
+    } catch (error: any) {
+      if (error?.code !== "ER_BAD_FIELD_ERROR") {
+        throw error;
+      }
+    }
+
+    try {
+      await bootstrapPool.query("ALTER TABLE items ADD COLUMN sender_name VARCHAR(120) NULL AFTER description");
+    } catch (error: any) {
+      if (error?.code !== "ER_DUP_FIELDNAME" && error?.code !== "ER_CANT_DROP_FIELD_OR_KEY") {
+        throw error;
+      }
+    }
+
+    try {
+      await bootstrapPool.query("ALTER TABLE items ADD COLUMN sender_student_id VARCHAR(30) NULL AFTER sender_name");
+    } catch (error: any) {
+      if (error?.code !== "ER_DUP_FIELDNAME" && error?.code !== "ER_CANT_DROP_FIELD_OR_KEY") {
+        throw error;
+      }
+    }
+
     try {
       await bootstrapPool.query(
         "ALTER TABLE users ADD COLUMN must_change_password TINYINT(1) NOT NULL DEFAULT 0 AFTER password_hash"

@@ -10,10 +10,18 @@ import {
   updateStoredItem,
   updateStoredItemStatus
 } from "../models/itemModel";
+import { listCategories, listLocations } from "../models/lookupModel";
 import { recalculateMatchesForPost } from "./matchingService";
 import { Item, Report, User } from "../domain/entities";
 import { syncTagMetadata } from "./tagService";
 import bcrypt from "bcryptjs";
+import {
+  createTagForAdmin,
+  deleteTagForAdmin,
+  listTagsForAdmin,
+  updateTagForAdmin
+} from "../models/tagModel";
+import { normalizeTagToken } from "../utils/tags";
 
 const REQUIRED_EMAIL_DOMAIN = "@st.ueh.edu.vn";
 
@@ -119,6 +127,32 @@ export async function createStoredItemAsAdmin(input: {
   postId?: number;
   managedBy: number;
 }) {
+  // Validate category
+  const categories = await listCategories();
+  if (!categories.some((c: any) => Number(c.id) === Number(input.categoryId))) {
+    throw new AppError(400, "Invalid category");
+  }
+
+  // Validate location
+  const locations = await listLocations();
+  if (!locations.some((l: any) => Number(l.id) === Number(input.locationId))) {
+    throw new AppError(400, "Invalid location");
+  }
+
+  // If postId provided, ensure post exists
+  if (input.postId) {
+    const post = await getPostById(input.postId);
+    if (!post) {
+      throw new AppError(400, "Referenced post does not exist");
+    }
+  }
+
+  // Ensure manager exists
+  const manager = await findUserById(input.managedBy);
+  if (!manager) {
+    throw new AppError(400, "Manager user not found");
+  }
+
   return createStoredItem(input);
 }
 
@@ -147,4 +181,45 @@ export async function updateStoredItemAsAdmin(
 
 export async function deleteStoredItemAsAdmin(itemId: number): Promise<void> {
   await deleteStoredItem(itemId);
+}
+
+export async function getTagsAsAdmin(keyword?: string) {
+  const rows = await listTagsForAdmin(keyword);
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    use_count: Number(row.use_count),
+    is_prebuilt: row.is_prebuilt === 1 ? 1 : 0,
+    is_frequent: row.is_frequent === 1 ? 1 : 0,
+    last_used_at: row.last_used_at
+  }));
+}
+
+export async function createTagAsAdmin(input: { name: string; isPrebuilt: boolean }): Promise<void> {
+  const normalized = normalizeTagToken(input.name);
+  if (!normalized) {
+    throw new AppError(400, "Invalid tag format");
+  }
+  await createTagForAdmin({
+    name: normalized,
+    isPrebuilt: input.isPrebuilt
+  });
+}
+
+export async function updateTagAsAdmin(
+  tagId: number,
+  input: { name: string; isPrebuilt: boolean }
+): Promise<void> {
+  const normalized = normalizeTagToken(input.name);
+  if (!normalized) {
+    throw new AppError(400, "Invalid tag format");
+  }
+  await updateTagForAdmin(tagId, {
+    name: normalized,
+    isPrebuilt: input.isPrebuilt
+  });
+}
+
+export async function deleteTagAsAdmin(tagId: number): Promise<void> {
+  await deleteTagForAdmin(tagId);
 }
